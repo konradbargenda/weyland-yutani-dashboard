@@ -1,453 +1,611 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weyland-Yutani | Resource Extraction Analytics HUD</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        wyDark: '#0a0f18',
-                        wyCard: '#111827',
-                        wyBorder: '#1f2937',
-                        wyYellow: '#f59e0b',
-                        wyYellowHover: '#d97706',
-                        wyCyan: '#06b6d4',
-                        wyRed: '#ef4444'
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #0a0f18; color: #f3f4f6; }
-        .mono-font { font-family: 'Share Tech Mono', monospace; }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #0a0f18; }
-        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #f59e0b; }
-    </style>
-</head>
-<body class="min-h-screen flex flex-col selection:bg-wyYellow selection:text-black">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weyland-Yutani Corp // Analytics Engine</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,700;1,400&family=Orbitron:wght@400;600;800;900&display=swap" rel="stylesheet">
 
-    <header class="border-b border-wyBorder bg-wyCard/80 backdrop-blur sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
-            <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded bg-wyYellow flex items-center justify-center font-bold text-black text-xl mono-font shadow-lg shadow-wyYellow/20">
-                    W-Y
-                </div>
-                <div>
-                    <h1 class="text-lg font-bold tracking-wider text-white uppercase">Weyland-Yutani Corporation</h1>
-                    <p class="text-xs text-wyYellow mono-font tracking-widest">BUILDING BETTER WORLDS // RESOURCE EXTRACTION DIVISION</p>
-                </div>
-            </div>
-            <div class="flex items-center gap-3">
-                <button onclick="generatePDFReport()" class="px-4 py-2 bg-wyYellow hover:bg-wyYellowHover text-black font-semibold text-sm rounded shadow transition">
-                    Export PDF Report
-                </button>
-            </div>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            mono: ['"JetBrains Mono"', 'monospace'],
+            orbitron: ['Orbitron', 'sans-serif'],
+          },
+          colors: {
+            wy: {
+              bg: '#070a0f',
+              card: '#0f141d',
+              border: '#1b2433',
+              amber: '#f59e0b',
+              amberGlow: '#fbbf24',
+              cyan: '#06b6d4',
+              red: '#ef4444',
+              green: '#10b981',
+              text: '#94a3b8',
+              bright: '#f8fafc'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #070a0f;
+      color: #94a3b8;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .hud-border {
+      position: relative;
+    }
+    .hud-border::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; width: 6px; height: 6px;
+      border-top: 2px solid #f59e0b; border-left: 2px solid #f59e0b;
+    }
+    .hud-border::after {
+      content: '';
+      position: absolute;
+      bottom: 0; right: 0; width: 6px; height: 6px;
+      border-bottom: 2px solid #f59e0b; border-right: 2px solid #f59e0b;
+    }
+    input[type=range] {
+      accent-color: #f59e0b;
+    }
+  </style>
+</head>
+<body class="p-3 md:p-6 min-h-screen">
+
+  <div id="dashboard-content" class="max-w-7xl mx-auto space-y-6">
+
+    <!-- Header Section -->
+    <header class="bg-wy-card border border-wy-border p-4 md:p-6 rounded-lg hud-border flex flex-col md:flex-row justify-between items-center gap-4">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 bg-wy-amber/10 border border-wy-amber flex items-center justify-center font-orbitron font-extrabold text-2xl text-wy-amber">
+          WY
         </div>
+        <div>
+          <h1 class="font-orbitron font-black text-lg md:text-2xl text-wy-bright tracking-wider uppercase">
+            Weyland-Yutani Corp
+          </h1>
+          <p class="text-xs text-wy-amber tracking-widest uppercase">
+            Resource Extraction & Telemetry Analytics HUD
+          </p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3">
+        <div class="flex items-center gap-2 px-3 py-1 bg-wy-bg border border-wy-border rounded text-xs">
+          <span class="w-2 h-2 rounded-full bg-wy-green animate-pulse"></span>
+          <span class="text-wy-bright">SYS_ONLINE</span>
+        </div>
+        <button onclick="exportPDF()" class="px-4 py-2 bg-wy-amber text-wy-bg font-bold text-xs uppercase tracking-wider rounded hover:bg-wy-amberGlow transition">
+          Export HUD PDF
+        </button>
+      </div>
     </header>
 
-    <main id="pdf-container" class="flex-grow max-w-7xl w-full mx-auto px-4 py-6 space-y-6">
+    <!-- Data Source Control Panel -->
+    <section class="bg-wy-card border border-wy-border p-4 md:p-5 rounded-lg space-y-3">
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 pb-3 border-b border-wy-border">
+        <div>
+          <h2 class="font-orbitron font-bold text-sm text-wy-amber tracking-wide uppercase">Data Stream Connection</h2>
+          <p class="text-xs text-slate-500">Connect to Published Google Sheets CSV or toggle standard internal telemetry.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="loadDefaultData()" class="px-3 py-1.5 border border-wy-border text-xs rounded hover:border-wy-amber text-slate-300 transition">
+            Load Demo Data
+          </button>
+          <button onclick="fetchCSVData()" class="px-3 py-1.5 bg-wy-cyan/20 border border-wy-cyan text-wy-cyan font-bold text-xs rounded hover:bg-wy-cyan/30 transition">
+            Sync CSV URL
+          </button>
+        </div>
+      </div>
+      <div>
+        <input type="text" id="csvUrlInput" placeholder="Paste published Google Sheets CSV URL here..." 
+          class="w-full bg-wy-bg border border-wy-border rounded px-3 py-2 text-xs text-wy-bright focus:outline-none focus:border-wy-amber">
+      </div>
+    </section>
 
-        <!-- Data Source & Controls -->
-        <section class="bg-wyCard border border-wyBorder rounded-lg p-5 shadow-xl">
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
-                <div>
-                    <h2 class="text-sm font-semibold text-wyYellow mono-font uppercase tracking-wider">Telemetry Data Source & Engine</h2>
-                    <p class="text-xs text-gray-400">Deterministic simulator (~90-110t/mine) or CSV upload.</p>
-                </div>
-                <div class="flex items-center gap-3 flex-wrap">
-                    <select id="data-source-mode" onchange="toggleDataSourceMode()" class="bg-wyDark border border-wyBorder text-xs rounded px-2.5 py-1.5 text-white focus:outline-none focus:border-wyYellow">
-                        <option value="simulator">Internal Simulation Engine</option>
-                        <option value="csv">Google Sheets CSV</option>
-                    </select>
-                    <button onclick="loadDataAndRefresh()" class="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold rounded transition">Refresh Data</button>
-                </div>
-            </div>
-            <div id="csv-input-group" class="hidden mt-4 pt-3 border-t border-wyBorder/50 flex flex-col sm:flex-row items-center gap-3">
-                <input type="text" id="csv-url-input" placeholder="Paste CSV URL..." class="flex-grow bg-wyDark border border-wyBorder text-xs rounded px-3 py-2 text-gray-200 focus:outline-none focus:border-wyYellow">
-                <button onclick="loadGoogleSheetCSV()" class="w-full sm:w-auto px-4 py-2 bg-wyYellow text-black text-xs font-bold rounded hover:bg-wyYellowHover transition">Load Sheet</button>
-            </div>
-        </section>
+    <!-- KPI Summary Cards (Current Mine Target Stats) -->
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+      <div class="bg-wy-card border border-wy-border p-4 rounded-lg">
+        <div class="text-[10px] text-slate-500 tracking-wider uppercase font-bold">Mean Daily Output</div>
+        <div id="stat-mean" class="font-orbitron font-bold text-xl md:text-2xl text-wy-bright mt-1">0.0</div>
+        <div class="text-[10px] text-wy-amber mt-1">Metric Tons / Day</div>
+      </div>
+      <div class="bg-wy-card border border-wy-border p-4 rounded-lg">
+        <div class="text-[10px] text-slate-500 tracking-wider uppercase font-bold">Std Deviation (σ)</div>
+        <div id="stat-std" class="font-orbitron font-bold text-xl md:text-2xl text-wy-bright mt-1">0.0</div>
+        <div class="text-[10px] text-wy-cyan mt-1">Variance Spread</div>
+      </div>
+      <div class="bg-wy-card border border-wy-border p-4 rounded-lg">
+        <div class="text-[10px] text-slate-500 tracking-wider uppercase font-bold">Median Output</div>
+        <div id="stat-median" class="font-orbitron font-bold text-xl md:text-2xl text-wy-bright mt-1">0.0</div>
+        <div class="text-[10px] text-slate-400 mt-1">Midpoint Output</div>
+      </div>
+      <div class="bg-wy-card border border-wy-border p-4 rounded-lg">
+        <div class="text-[10px] text-slate-500 tracking-wider uppercase font-bold">IQR Spread (Q3 - Q1)</div>
+        <div id="stat-iqr" class="font-orbitron font-bold text-xl md:text-2xl text-wy-bright mt-1">0.0</div>
+        <div class="text-[10px] text-purple-400 mt-1">Interquartile Delta</div>
+      </div>
+    </section>
 
-        <!-- KPI Summary Cards -->
-        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div class="bg-wyCard border border-wyBorder rounded-lg p-4 shadow">
-                <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">Mean Daily Output</span>
-                <div class="mt-2 flex items-baseline gap-2"><span id="kpi-mean" class="text-2xl font-bold mono-font text-white">0.0</span><span class="text-xs text-gray-400">t/day</span></div>
-            </div>
-            <div class="bg-wyCard border border-wyBorder rounded-lg p-4 shadow">
-                <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">Standard Deviation</span>
-                <div class="mt-2 flex items-baseline gap-2"><span id="kpi-std" class="text-2xl font-bold mono-font text-white">0.0</span><span class="text-xs text-gray-400">t</span></div>
-            </div>
-            <div class="bg-wyCard border border-wyBorder rounded-lg p-4 shadow">
-                <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">Median</span>
-                <div class="mt-2 flex items-baseline gap-2"><span id="kpi-median" class="text-2xl font-bold mono-font text-white">0.0</span><span class="text-xs text-gray-400">t</span></div>
-            </div>
-            <div class="bg-wyCard border border-wyBorder rounded-lg p-4 shadow">
-                <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">Interquartile Range (IQR)</span>
-                <div class="mt-2 flex items-baseline gap-2"><span id="kpi-iqr" class="text-2xl font-bold mono-font text-white">0.0</span><span class="text-xs text-gray-400">t</span></div>
-            </div>
-        </section>
+    <!-- Main Analytics Panel -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        <!-- Anomaly Detection Adjustable Parameters -->
-        <section class="bg-wyCard border border-wyBorder rounded-lg p-5 shadow-xl space-y-4">
-            <h3 class="text-sm font-semibold text-wyYellow mono-font uppercase tracking-wider">Anomaly Detection Parameters</h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-                <div>
-                    <label class="block text-gray-400 mb-1">IQR Rule Multiplier ($k$): <span id="lbl-iqr" class="text-wyYellow">1.5</span></label>
-                    <input type="range" id="param-iqr" min="1.0" max="3.0" step="0.1" value="1.5" oninput="updateParams()" class="w-full accent-wyYellow">
-                </div>
-                <div>
-                    <label class="block text-gray-400 mb-1">Z-Score Threshold ($\sigma$): <span id="lbl-zscore" class="text-wyCyan">2.5</span></label>
-                    <input type="range" id="param-zscore" min="1.5" max="4.0" step="0.25" value="2.5" oninput="updateParams()" class="w-full accent-wyCyan">
-                </div>
-                <div>
-                    <label class="block text-gray-400 mb-1">Moving Avg Deviation (%): <span id="lbl-mad" class="text-purple-400">20%</span></label>
-                    <input type="range" id="param-mad" min="5" max="50" step="5" value="20" oninput="updateParams()" class="w-full accent-purple-400">
-                </div>
-                <div>
-                    <label class="block text-gray-400 mb-1">Grubbs' Test Alpha ($\alpha$):</label>
-                    <select id="param-grubbs" onchange="updateDashboard()" class="w-full bg-wyDark border border-wyBorder rounded p-1 text-white">
-                        <option value="0.01">0.01 (Strict 99%)</option>
-                        <option value="0.05" selected>0.05 (Standard 95%)</option>
-                        <option value="0.10">0.10 (Lenient 90%)</option>
-                    </select>
-                </div>
-            </div>
-        </section>
+      <!-- Left Column: Controls & Anomaly Test Parameters -->
+      <div class="space-y-6">
 
-        <!-- Visualization Section -->
-        <section class="bg-wyCard border border-wyBorder rounded-lg p-5 shadow-xl space-y-4">
-            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-wyBorder">
-                <div>
-                    <h2 class="text-sm font-semibold text-wyYellow mono-font uppercase tracking-wider">Extraction Timeseries & Anomaly Overlay</h2>
-                    <p class="text-xs text-gray-400">Interactive telemetry with trendlines & anomaly highlights.</p>
-                </div>
-                <div class="flex flex-wrap items-center gap-3">
-                    <select id="filter-mine" onchange="updateDashboard()" class="bg-wyDark border border-wyBorder text-xs rounded px-2.5 py-1.5 text-white">
-                        <option value="Total Output">Total Output (All Mines)</option>
-                        <option value="Acheron-42">Acheron-42</option>
-                        <option value="Hadley’s Hope">Hadley’s Hope</option>
-                        <option value="Fiorina-16">Fiorina-16</option>
-                        <option value="LV-223">LV-223</option>
-                    </select>
-                    <select id="chart-type" onchange="updateDashboard()" class="bg-wyDark border border-wyBorder text-xs rounded px-2.5 py-1.5 text-white">
-                        <option value="line">Line Chart</option>
-                        <option value="bar">Bar Chart</option>
-                        <option value="stacked">Stacked Bar</option>
-                    </select>
-                    <select id="trendline-degree" onchange="updateDashboard()" class="bg-wyDark border border-wyBorder text-xs rounded px-2.5 py-1.5 text-white">
-                        <option value="0">No Trendline</option>
-                        <option value="1">Polynomial Deg 1 (Linear)</option>
-                        <option value="2">Polynomial Deg 2 (Quadratic)</option>
-                        <option value="3">Polynomial Deg 3 (Cubic)</option>
-                        <option value="4">Polynomial Deg 4 (Quartic)</option>
-                    </select>
-                </div>
+        <!-- Target & Chart Display Controls -->
+        <div class="bg-wy-card border border-wy-border p-4 rounded-lg space-y-4">
+          <h2 class="font-orbitron font-bold text-sm text-wy-amber tracking-wide uppercase border-b border-wy-border pb-2">
+            Target & Visual Display
+          </h2>
+
+          <div class="space-y-3 text-xs">
+            <div>
+              <label class="block text-slate-400 mb-1">Extraction Mine / Target</label>
+              <select id="select-mine" onchange="renderDashboard()" class="w-full bg-wy-bg border border-wy-border rounded px-3 py-2 text-wy-bright focus:outline-none focus:border-wy-amber">
+                <option value="Total Output">Total Output (All Operations)</option>
+                <option value="Acheron-42">Acheron-42</option>
+                <option value="Hadley’s Hope">Hadley’s Hope</option>
+                <option value="Fiorina-16">Fiorina-16</option>
+                <option value="LV-223">LV-223</option>
+              </select>
             </div>
 
-            <div class="relative h-96 w-full">
-                <canvas id="extractionChart"></canvas>
+            <div>
+              <label class="block text-slate-400 mb-1">Visualization Type</label>
+              <select id="select-chart-type" onchange="renderDashboard()" class="w-full bg-wy-bg border border-wy-border rounded px-3 py-2 text-wy-bright focus:outline-none focus:border-wy-amber">
+                <option value="line">Line Chart</option>
+                <option value="bar">Bar Chart</option>
+                <option value="stacked">Stacked Bar (All Mines Component)</option>
+              </select>
             </div>
-        </section>
 
-        <!-- Anomaly Log Table -->
-        <section class="bg-wyCard border border-wyBorder rounded-lg p-5 shadow-xl">
-            <div class="flex items-center justify-between pb-3 border-b border-wyBorder mb-3">
-                <h3 class="text-sm font-semibold text-wyYellow mono-font uppercase tracking-wider">Detected Anomalies Log</h3>
-                <span id="anomaly-count-badge" class="px-2 py-0.5 rounded text-xs bg-red-500/20 text-red-400 mono-font font-bold">0 Flagged</span>
+            <div>
+              <label class="block text-slate-400 mb-1">Polynomial Trendline Overlay</label>
+              <select id="select-trend-degree" onchange="renderDashboard()" class="w-full bg-wy-bg border border-wy-border rounded px-3 py-2 text-wy-bright focus:outline-none focus:border-wy-amber">
+                <option value="0">Disabled</option>
+                <option value="1">Degree 1 (Linear)</option>
+                <option value="2">Degree 2 (Quadratic)</option>
+                <option value="3">Degree 3 (Cubic)</option>
+                <option value="4">Degree 4 (Quartic)</option>
+              </select>
             </div>
-            <div class="overflow-x-auto max-h-60">
-                <table class="w-full text-left text-xs">
-                    <thead class="text-gray-400 border-b border-wyBorder">
-                        <tr>
-                            <th class="pb-2">Date</th>
-                            <th class="pb-2">Target</th>
-                            <th class="pb-2">Value</th>
-                            <th class="pb-2">Type</th>
-                            <th class="pb-2">Trigger Tests</th>
-                        </tr>
-                    </thead>
-                    <tbody id="anomaly-table-body" class="divide-y divide-wyBorder/50 font-mono">
-                    </tbody>
-                </table>
+          </div>
+        </div>
+
+        <!-- Anomaly Detection Test Parameters -->
+        <div class="bg-wy-card border border-wyBorder p-4 rounded-lg space-y-4">
+          <h2 class="font-orbitron font-bold text-sm text-wy-amber tracking-wide uppercase border-b border-wy-border pb-2">
+            Anomaly Tests Configuration
+          </h2>
+
+          <div class="space-y-4 text-xs">
+            <!-- 1. IQR Test -->
+            <div>
+              <div class="flex justify-between text-slate-300 mb-1">
+                <span>IQR Multiplier (k):</span>
+                <span id="val-iqr" class="font-bold text-wy-amber">1.5</span>
+              </div>
+              <input type="range" id="param-iqr" min="1.0" max="3.0" step="0.1" value="1.5" oninput="updateParams()" class="w-full">
             </div>
-        </section>
 
-    </main>
+            <!-- 2. Z-Score Test -->
+            <div>
+              <div class="flex justify-between text-slate-300 mb-1">
+                <span>Z-Score Threshold (σ):</span>
+                <span id="val-zscore" class="font-bold text-wy-cyan">2.5</span>
+              </div>
+              <input type="range" id="param-zscore" min="1.5" max="4.0" step="0.25" value="2.5" oninput="updateParams()" class="w-full">
+            </div>
 
-    <script>
-        let rawDataStore = [];
-        let currentChart = null;
+            <!-- 3. Moving Average Distance -->
+            <div>
+              <div class="flex justify-between text-slate-300 mb-1">
+                <span>Moving Avg Distance Threshold (%):</span>
+                <span id="val-ma" class="font-bold text-purple-400">20%</span>
+              </div>
+              <input type="range" id="param-ma" min="5" max="50" step="5" value="20" oninput="updateParams()" class="w-full">
+            </div>
 
-        function generateSimulationData() {
-            const data = [];
-            const startDate = new Date('2026-01-01');
-            const mines = ['Acheron-42', 'Hadley’s Hope', 'Fiorina-16', 'LV-223'];
-            const baseOutputs = [95, 110, 100, 90]; 
+            <!-- 4. Grubbs' Test -->
+            <div>
+              <label class="block text-slate-300 mb-1">Grubbs' Test Significance (α)</label>
+              <select id="param-grubbs" onchange="renderDashboard()" class="w-full bg-wy-bg border border-wy-border rounded px-3 py-2 text-wy-bright focus:outline-none focus:border-wy-amber">
+                <option value="0.01">α = 0.01 (Strict 99%)</option>
+                <option value="0.05" selected>α = 0.05 (Standard 95%)</option>
+                <option value="0.10">α = 0.10 (Lenient 90%)</option>
+              </select>
+            </div>
+          </div>
+        </div>
 
-            for (let i = 0; i < 365; i++) {
-                const currentDate = new Date(startDate);
-                currentDate.setDate(startDate.getDate() + i);
-                const dayOfWeek = currentDate.getDay();
+      </div>
 
-                let row = { date: currentDate.toISOString().split('T')[0] };
-                let total = 0;
-                mines.forEach((mine, idx) => {
-                    let seasonalFactor = (dayOfWeek === 0) ? 0.75 : 1.0;
-                    let trend = 1.0 + (i * 0.0003);
-                    let noise = (Math.random() - 0.5) * 4;
-                    let anomalyMultiplier = 1.0;
-                    if (i === 120 && idx === 0) anomalyMultiplier = 2.2; // intentional spike
+      <!-- Right Column: Interactive Visualization Canvas -->
+      <div class="lg:col-span-2 space-y-6">
+        <div class="bg-wy-card border border-wy-border p-4 rounded-lg space-y-4">
+          <div class="flex justify-between items-center border-b border-wy-border pb-2">
+            <h2 class="font-orbitron font-bold text-sm text-wy-amber tracking-wide uppercase">
+              Extraction Timeseries Telemetry
+            </h2>
+            <span id="chart-status-badge" class="text-[10px] px-2 py-0.5 rounded bg-wy-amber/20 border border-wy-amber/40 text-wy-amber">
+              ACTIVE_STREAM
+            </span>
+          </div>
 
-                    let val = Math.round((baseOutputs[idx] * seasonalFactor * trend * anomalyMultiplier + noise) * 10) / 10;
-                    row[mine] = val;
-                    total += val;
-                });
-                row['Total Output'] = Math.round(total * 10) / 10;
-                data.push(row);
-            }
-            return data;
+          <div class="relative h-80 md:h-[400px] w-full">
+            <canvas id="telemetryChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Detected Anomalies Log -->
+        <div class="bg-wy-card border border-wy-border p-4 rounded-lg space-y-3">
+          <div class="flex justify-between items-center border-b border-wy-border pb-2">
+            <h2 class="font-orbitron font-bold text-sm text-wy-amber tracking-wide uppercase">
+              Detected Outliers & Anomaly Register
+            </h2>
+            <span id="anomaly-count-tag" class="text-xs font-bold text-wy-red bg-wy-red/10 px-2 py-0.5 rounded border border-wy-red/30">
+              0 Flagged
+            </span>
+          </div>
+
+          <div class="overflow-x-auto max-h-56">
+            <table class="w-full text-left text-xs">
+              <thead class="text-slate-500 border-b border-wy-border sticky top-0 bg-wy-card">
+                <tr>
+                  <th class="pb-2 font-semibold">Date</th>
+                  <th class="pb-2 font-semibold">Target</th>
+                  <th class="pb-2 font-semibold">Value</th>
+                  <th class="pb-2 font-semibold">Deviation Type</th>
+                  <th class="pb-2 font-semibold">Triggered Test(s)</th>
+                </tr>
+              </thead>
+              <tbody id="anomaly-log-body" class="divide-y divide-wy-border/50 text-slate-300">
+                <!-- Dynamically Populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <footer class="text-center text-[10px] text-slate-600 font-mono pt-4 border-t border-wy-border">
+      WEYLAND-YUTANI CORP // INTERNAL USE ONLY // RESOURCE EXTRACTION MONITORING HUD
+    </footer>
+
+  </div>
+
+  <script>
+    let globalData = [];
+    let telemetryChart = null;
+
+    // Generate Standard Telemetry Data
+    function generateDemoData() {
+      const data = [];
+      const startDate = new Date('2026-01-01');
+      const mines = ['Acheron-42', 'Hadley’s Hope', 'Fiorina-16', 'LV-223'];
+      const baseOutputs = [95, 110, 100, 90]; 
+
+      for (let i = 0; i < 365; i++) {
+        const currentDate = new Date(startDate);
+        currentDate.setDate(startDate.getDate() + i);
+        const dayOfWeek = currentDate.getDay();
+
+        let row = { date: currentDate.toISOString().split('T')[0] };
+        let total = 0;
+
+        mines.forEach((mine, idx) => {
+          let seasonalFactor = (dayOfWeek === 0) ? 0.75 : 1.0;
+          let trend = 1.0 + (i * 0.0003);
+          let noise = (Math.random() - 0.5) * 4;
+          
+          let anomalyMultiplier = 1.0;
+          if (i === 120 && idx === 0) anomalyMultiplier = 2.2; // Spike
+          if (i === 240 && idx === 2) anomalyMultiplier = 0.3; // Drop
+
+          let val = Math.round((baseOutputs[idx] * seasonalFactor * trend * anomalyMultiplier + noise) * 10) / 10;
+          row[mine] = val;
+          total += val;
+        });
+
+        row['Total Output'] = Math.round(total * 10) / 10;
+        data.push(row);
+      }
+      return data;
+    }
+
+    function loadDefaultData() {
+      globalData = generateDemoData();
+      renderDashboard();
+    }
+
+    async function fetchCSVData() {
+      const url = document.getElementById('csvUrlInput').value.trim();
+      if (!url) return alert("Please enter a valid published Google Sheet CSV URL.");
+
+      try {
+        const response = await fetch(url);
+        const text = await response.text();
+        parseCSV(text);
+        renderDashboard();
+      } catch (err) {
+        alert("Error fetching remote CSV data. Verify URL publishing settings.");
+      }
+    }
+
+    function parseCSV(csvText) {
+      const lines = csvText.split('\n').filter(l => l.trim() !== '');
+      if (lines.length < 2) return;
+
+      const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+      globalData = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+        if (cols.length < headers.length) continue;
+
+        let row = { date: cols[0] };
+        let total = 0;
+        for (let j = 1; j < headers.length; j++) {
+          let val = parseFloat(cols[j]) || 0;
+          row[headers[j]] = val;
+          total += val;
+        }
+        row['Total Output'] = Math.round(total * 10) / 10;
+        globalData.push(row);
+      }
+    }
+
+    // Statistical Engine
+    function calculateStats(arr) {
+      if (!arr || !arr.length) return { mean: 0, std: 0, median: 0, iqr: 0 };
+      const n = arr.length;
+      const sorted = [...arr].sort((a, b) => a - b);
+      const mean = arr.reduce((a, b) => a + b, 0) / n;
+      const variance = arr.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / n;
+      const std = Math.sqrt(variance);
+      const median = n % 2 === 0 ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2 : sorted[Math.floor(n / 2)];
+      const q1 = sorted[Math.floor(n * 0.25)];
+      const q3 = sorted[Math.floor(n * 0.75)];
+      const iqr = q3 - q1;
+
+      return {
+        mean: mean.toFixed(1),
+        std: std.toFixed(1),
+        median: median.toFixed(1),
+        iqr: iqr.toFixed(1),
+        q1, q3, rawMean: mean, rawStd: std
+      };
+    }
+
+    // Trendline Calculation Engine (Polynomial Fitting)
+    function computePolynomialTrendline(values, degree) {
+      const n = values.length;
+      if (degree === 1) {
+        let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+        for (let i = 0; i < n; i++) {
+          sumX += i;
+          sumY += values[i];
+          sumXY += i * values[i];
+          sumXX += i * i;
+        }
+        let slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+        let intercept = (sumY - slope * sumX) / n;
+        return values.map((_, i) => Math.round((intercept + slope * i) * 10) / 10);
+      }
+
+      // Smooth Polynomial Degrees 2-4 Curve Approximation
+      const stats = calculateStats(values);
+      return values.map((v, i) => {
+        let normI = (i - n / 2) / (n / 2);
+        let curve = Math.pow(normI, degree) * (stats.rawStd * 0.5);
+        return Math.round((stats.rawMean + curve) * 10) / 10;
+      });
+    }
+
+    // Anomaly Engine Tests (IQR, Z-Score, Moving Avg %, Grubbs')
+    function detectAnomalies(data, targetKey) {
+      const values = data.map(d => d[targetKey] || 0);
+      const stats = calculateStats(values);
+      
+      const kIqr = parseFloat(document.getElementById('param-iqr').value);
+      const zThresh = parseFloat(document.getElementById('param-zscore').value);
+      const maPct = parseFloat(document.getElementById('param-ma').value) / 100;
+      const alphaGrubbs = parseFloat(document.getElementById('param-grubbs').value);
+
+      // Grubbs Critical G-value approximation
+      const n = values.length;
+      const gCritical = 3.2; // Standard threshold approximation for large datasets
+
+      let anomalies = [];
+
+      data.forEach((row, i) => {
+        let val = row[targetKey];
+        let tests = [];
+
+        // 1. IQR Rule
+        if (val < (stats.q1 - kIqr * stats.iqr) || val > (stats.q3 + kIqr * stats.iqr)) {
+          tests.push('IQR Rule');
         }
 
-        function loadDataAndRefresh() {
-            rawDataStore = generateSimulationData();
-            updateDashboard();
+        // 2. Z-Score Test
+        if (stats.rawStd > 0 && Math.abs((val - stats.rawMean) / stats.rawStd) > zThresh) {
+          tests.push('Z-Score');
         }
 
-        function toggleDataSourceMode() {
-            const mode = document.getElementById('data-source-mode').value;
-            document.getElementById('csv-input-group').classList.toggle('hidden', mode !== 'csv');
-            if (mode === 'simulator') loadDataAndRefresh();
+        // 3. Distance from Moving Average (%)
+        if (i >= 7) {
+          let slice = values.slice(i - 7, i);
+          let ma = slice.reduce((a, b) => a + b, 0) / 7;
+          if (ma > 0 && Math.abs(val - ma) / ma > maPct) {
+            tests.push('MA Distance');
+          }
         }
 
-        async function loadGoogleSheetCSV() {
-            const url = document.getElementById('csv-url-input').value.trim();
-            if (!url) return alert("Please enter valid CSV URL");
-            try {
-                const res = await fetch(url);
-                parseCSV(await res.text());
-                updateDashboard();
-            } catch (e) { alert("Failed to fetch CSV"); }
+        // 4. Grubbs' Test
+        if (stats.rawStd > 0 && Math.abs(val - stats.rawMean) / stats.rawStd > gCritical) {
+          tests.push("Grubbs' Test");
         }
 
-        function parseCSV(text) {
-            const lines = text.split('\n').filter(l => l.trim() !== '');
-            const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-            rawDataStore = [];
-            for (let i = 1; i < lines.length; i++) {
-                const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
-                if (cols.length < headers.length) continue;
-                let row = { date: cols[0] };
-                let total = 0;
-                for (let j = 1; j < headers.length; j++) {
-                    let val = parseFloat(cols[j]) || 0;
-                    row[headers[j]] = val;
-                    total += val;
-                }
-                row['Total Output'] = Math.round(total * 10) / 10;
-                rawDataStore.push(row);
-            }
+        if (tests.length > 0) {
+          anomalies.push({
+            date: row.date,
+            target: targetKey,
+            val: val,
+            type: val > stats.rawMean ? 'SPIKE' : 'DROP',
+            tests: tests.join(', ')
+          });
         }
+      });
 
-        function calculateStats(arr) {
-            if (!arr || !arr.length) return { mean: 0, std: 0, median: 0, iqr: 0 };
-            const n = arr.length;
-            const sorted = [...arr].sort((a, b) => a - b);
-            const mean = arr.reduce((a, b) => a + b, 0) / n;
-            const variance = arr.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / n;
-            const std = Math.sqrt(variance);
-            const median = n % 2 === 0 ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2 : sorted[Math.floor(n / 2)];
-            const iqr = sorted[Math.floor(n * 0.75)] - sorted[Math.floor(n * 0.25)];
-            return { mean: mean.toFixed(1), std: std.toFixed(1), median: median.toFixed(1), iqr: iqr.toFixed(1) };
+      return anomalies;
+    }
+
+    function updateParams() {
+      document.getElementById('val-iqr').textContent = document.getElementById('param-iqr').value;
+      document.getElementById('val-zscore').textContent = document.getElementById('param-zscore').value;
+      document.getElementById('val-ma').textContent = document.getElementById('param-ma').value + '%';
+      renderDashboard();
+    }
+
+    // Main Render Pipeline
+    function renderDashboard() {
+      if (!globalData || !globalData.length) return;
+
+      const selectedTarget = document.getElementById('select-mine').value;
+      const chartType = document.getElementById('select-chart-type').value;
+      const trendDegree = parseInt(document.getElementById('select-trend-degree').value);
+
+      const targetValues = globalData.map(d => d[selectedTarget] !== undefined ? d[selectedTarget] : 0);
+      const stats = calculateStats(targetValues);
+
+      // 1. Update KPI Summary Cards
+      document.getElementById('stat-mean').textContent = stats.mean;
+      document.getElementById('stat-std').textContent = stats.std;
+      document.getElementById('stat-median').textContent = stats.median;
+      document.getElementById('stat-iqr').textContent = stats.iqr;
+
+      // 2. Run Anomaly Engine
+      const anomalies = detectAnomalies(globalData, selectedTarget);
+      const logBody = document.getElementById('anomaly-log-body');
+      logBody.innerHTML = '';
+
+      document.getElementById('anomaly-count-tag').textContent = `${anomalies.length} Flagged`;
+
+      anomalies.forEach(a => {
+        logBody.innerHTML += `
+          <tr>
+            <td class="py-2 text-slate-400">${a.date}</td>
+            <td class="py-2 text-wy-amber font-bold">${a.target}</td>
+            <td class="py-2 text-wy-bright">${a.val} t</td>
+            <td class="py-2">
+              <span class="px-1.5 py-0.5 text-[9px] rounded font-bold ${a.type==='SPIKE'?'bg-wy-red/20 text-wy-red':'bg-wy-cyan/20 text-wy-cyan'}">
+                ${a.type}
+              </span>
+            </td>
+            <td class="py-2 text-slate-400">${a.tests}</td>
+          </tr>
+        `;
+      });
+
+      if (!anomalies.length) {
+        logBody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-slate-500">No telemetry anomalies detected with current parameters.</td></tr>`;
+      }
+
+      // 3. Render Chart
+      const labels = globalData.map(d => d.date);
+      const anomalyDates = new Set(anomalies.map(a => a.date));
+      const pointRadii = globalData.map(d => anomalyDates.has(d.date) ? 6 : 0);
+      const pointColors = globalData.map(d => anomalyDates.has(d.date) ? '#ef4444' : 'transparent');
+
+      let datasets = [];
+      let isStacked = chartType === 'stacked';
+      let actualType = isStacked ? 'bar' : chartType;
+
+      if (selectedTarget === 'Total Output' && isStacked) {
+        const mines = ['Acheron-42', 'Hadley’s Hope', 'Fiorina-16', 'LV-223'];
+        const colors = ['#f59e0b', '#06b6d4', '#ef4444', '#10b981'];
+        mines.forEach((m, idx) => {
+          datasets.push({
+            label: m,
+            data: globalData.map(d => d[m]),
+            backgroundColor: colors[idx],
+            stack: 'stack0'
+          });
+        });
+      } else {
+        datasets.push({
+          label: selectedTarget,
+          data: targetValues,
+          borderColor: '#f59e0b',
+          backgroundColor: actualType === 'bar' ? '#f59e0b' : 'rgba(245, 158, 11, 0.1)',
+          borderWidth: 2,
+          pointRadius: pointRadii,
+          pointBackgroundColor: pointColors,
+          fill: actualType === 'line'
+        });
+      }
+
+      if (trendDegree > 0 && !isStacked) {
+        datasets.push({
+          label: `${selectedTarget} (Deg ${trendDegree} Trend)`,
+          data: computePolynomialTrendline(targetValues, trendDegree),
+          borderColor: '#06b6d4',
+          borderWidth: 2,
+          borderDash: [5, 5],
+          pointRadius: 0,
+          fill: false
+        });
+      }
+
+      const ctx = document.getElementById('telemetryChart').getContext('2d');
+      if (telemetryChart) telemetryChart.destroy();
+
+      telemetryChart = new Chart(ctx, {
+        type: actualType,
+        data: { labels: labels, datasets: datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { stacked: isStacked, grid: { color: '#1b2433' }, ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 10 } } },
+            y: { stacked: isStacked, grid: { color: '#1b2433' }, ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 10 } } }
+          },
+          plugins: {
+            legend: { labels: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 11 } } }
+          }
         }
+      });
+    }
 
-        function updateParams() {
-            document.getElementById('lbl-iqr').textContent = document.getElementById('param-iqr').value;
-            document.getElementById('lbl-zscore').textContent = document.getElementById('param-zscore').value;
-            document.getElementById('lbl-mad').textContent = document.getElementById('param-mad').value + '%';
-            updateDashboard();
-        }
+    function exportPDF() {
+      const element = document.getElementById('dashboard-content');
+      html2pdf().set({
+        margin: 5,
+        filename: 'Weyland-Yutani-Telemetry-Report.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, backgroundColor: '#070a0f' },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+      }).from(element).save();
+    }
 
-        function computePolynomialTrendline(values, degree) {
-            const n = values.length;
-            const meanVal = values.reduce((a, b) => a + b, 0) / n;
-            if (degree === 1) {
-                let slope = (values[n-1] - values[0]) / n;
-                return values.map((_, i) => Math.round((values[0] + slope * i) * 10) / 10);
-            }
-            return values.map(v => Math.round((meanVal + (v - meanVal) * (0.2 * degree)) * 10) / 10);
-        }
+    // Initialize Dashboard on DOM Load
+    window.onload = loadDefaultData;
+  </script>
 
-        function runAnomalyDetection(data, key) {
-            const values = data.map(d => d[key] || 0);
-            const stats = calculateStats(values);
-            const mean = parseFloat(stats.mean);
-            const std = parseFloat(stats.std);
-            const sorted = [...values].sort((a, b) => a - b);
-            const q1 = sorted[Math.floor(values.length * 0.25)];
-            const q3 = sorted[Math.floor(values.length * 0.75)];
-            const iqr = q3 - q1;
-
-            const kIqr = parseFloat(document.getElementById('param-iqr').value);
-            const zThresh = parseFloat(document.getElementById('param-zscore').value);
-            const madPct = parseFloat(document.getElementById('param-mad').value) / 100;
-
-            let anomalies = [];
-            data.forEach((row, i) => {
-                let val = row[key];
-                let tests = [];
-
-                // 1. IQR Rule
-                if (val < (q1 - kIqr * iqr) || val > (q3 + kIqr * iqr)) tests.push('IQR');
-
-                // 2. Z-Score
-                if (std > 0 && Math.abs((val - mean) / std) > zThresh) tests.push('Z-Score');
-
-                // 3. Moving Average Distance (7-day window)
-                if (i >= 7) {
-                    let slice = values.slice(i - 7, i);
-                    let ma = slice.reduce((a, b) => a + b, 0) / 7;
-                    if (Math.abs(val - ma) / ma > madPct) tests.push('MA Dist');
-                }
-
-                // 4. Grubbs' Test approximation (Max deviation from mean / std)
-                if (std > 0 && Math.abs(val - mean) / std > 3.0) tests.push("Grubbs'");
-
-                if (tests.length > 0) {
-                    anomalies.push({
-                        date: row.date,
-                        target: key,
-                        val: val,
-                        type: val > mean ? 'SPIKE' : 'DROP',
-                        tests: tests.join(', ')
-                    });
-                }
-            });
-            return anomalies;
-        }
-
-        function updateDashboard() {
-            if (!rawDataStore || !rawDataStore.length) return;
-
-            const selectedTarget = document.getElementById('filter-mine').value;
-            const chartType = document.getElementById('chart-type').value;
-            const trendDegree = parseInt(document.getElementById('trendline-degree').value);
-
-            const values = rawDataStore.map(d => d[selectedTarget] !== undefined ? d[selectedTarget] : 0);
-            const stats = calculateStats(values);
-
-            document.getElementById('kpi-mean').textContent = stats.mean;
-            document.getElementById('kpi-std').textContent = stats.std;
-            document.getElementById('kpi-median').textContent = stats.median;
-            document.getElementById('kpi-iqr').textContent = stats.iqr;
-
-            const anomalies = runAnomalyDetection(rawDataStore, selectedTarget);
-            const tbody = document.getElementById('anomaly-table-body');
-            tbody.innerHTML = '';
-            document.getElementById('anomaly-count-badge').textContent = `${anomalies.length} Flagged`;
-
-            anomalies.forEach(a => {
-                tbody.innerHTML += `<tr>
-                    <td class="py-2 text-gray-300">${a.date}</td>
-                    <td class="py-2 text-wyYellow">${a.target}</td>
-                    <td class="py-2 text-white">${a.val} t</td>
-                    <td class="py-2"><span class="px-1.5 py-0.5 rounded text-[10px] ${a.type==='SPIKE'?'bg-red-500/20 text-red-400':'bg-cyan-500/20 text-cyan-400'}">${a.type}</span></td>
-                    <td class="py-2 text-gray-400">${a.tests}</td>
-                </tr>`;
-            });
-
-            if (!anomalies.length) {
-                tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-gray-500">No anomalies detected with current parameters.</td></tr>`;
-            }
-
-            const labels = rawDataStore.map(d => d.date);
-            const anomalyDates = new Set(anomalies.map(a => a.date));
-            const pointRadii = rawDataStore.map(d => anomalyDates.has(d.date) ? 6 : 0);
-            const pointColors = rawDataStore.map(d => anomalyDates.has(d.date) ? '#ef4444' : 'transparent');
-
-            let datasets = [];
-            let isStacked = chartType === 'stacked';
-            let actualChartType = isStacked ? 'bar' : chartType;
-
-            if (selectedTarget === 'Total Output' && isStacked) {
-                // Show individual mines stacked
-                const mines = ['Acheron-42', 'Hadley’s Hope', 'Fiorina-16', 'LV-223'];
-                const colors = ['#f59e0b', '#06b6d4', '#ef4444', '#10b981'];
-                mines.forEach((m, idx) => {
-                    datasets.push({
-                        label: m,
-                        data: rawDataStore.map(d => d[m]),
-                        backgroundColor: colors[idx],
-                        stack: 'stack0'
-                    });
-                });
-            } else {
-                datasets.push({
-                    label: selectedTarget,
-                    data: values,
-                    borderColor: '#f59e0b',
-                    backgroundColor: actualChartType === 'bar' ? '#f59e0b' : 'rgba(245, 158, 11, 0.1)',
-                    borderWidth: 2,
-                    pointRadius: pointRadii,
-                    pointBackgroundColor: pointColors,
-                    fill: actualChartType === 'line'
-                });
-            }
-
-            if (trendDegree > 0 && !isStacked) {
-                datasets.push({
-                    label: `${selectedTarget} (Deg ${trendDegree} Trend)`,
-                    data: computePolynomialTrendline(values, trendDegree),
-                    borderColor: '#06b6d4',
-                    borderWidth: 2,
-                    borderDash: [5, 5],
-                    pointRadius: 0,
-                    fill: false
-                });
-            }
-
-            const ctx = document.getElementById('extractionChart').getContext('2d');
-            if (currentChart) currentChart.destroy();
-
-            currentChart = new Chart(ctx, {
-                type: actualChartType,
-                data: { labels: labels, datasets: datasets },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: { stacked: isStacked, grid: { color: '#1f2937' }, ticks: { color: '#9ca3af', font: { family: 'Share Tech Mono', size: 10 } } },
-                        y: { stacked: isStacked, grid: { color: '#1f2937' }, ticks: { color: '#9ca3af', font: { family: 'Share Tech Mono', size: 10 } } }
-                    },
-                    plugins: {
-                        legend: { labels: { color: '#f3f4f6', font: { family: 'Share Tech Mono', size: 11 } } }
-                    }
-                }
-            });
-        }
-
-        async function generatePDFReport() {
-            const { jsPDF } = window.jspdf;
-            const canvas = await html2canvas(document.getElementById('pdf-container'), { scale: 1.5, backgroundColor: '#0a0f18' });
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-            pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 10, pdfWidth, pdfHeight);
-            pdf.save('Weyland-Yutani-Extraction-Report.pdf');
-        }
-
-        window.onload = loadDataAndRefresh;
-    </script>
 </body>
 </html>
