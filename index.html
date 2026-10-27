@@ -240,11 +240,15 @@
     let dynamicMinesList = [];
 
     async function fetchCSVData() {
-      const url = document.getElementById('csvUrlInput').value.trim();
-      if (!url) return;
+      let baseUrl = document.getElementById('csvUrlInput').value.trim();
+      if (!baseUrl) return;
+
+      // Dodanie znacznika czasu wymuszającego ominięcie pamięci podręcznej (cache) przeglądarki
+      const separator = baseUrl.includes('?') ? '&' : '?';
+      const cacheBustUrl = `${baseUrl}${separator}_cb=${new Date().getTime()}`;
 
       try {
-        const response = await fetch(url);
+        const response = await fetch(cacheBustUrl);
         if (!response.ok) throw new Error("Network response failed");
         const text = await response.text();
         parseCSV(text);
@@ -255,7 +259,6 @@
     }
 
     function parseCSV(csvText) {
-      // Automatyczne wykrywanie separatora (przecinek vs średnik)
       const firstLine = csvText.split('\n')[0] || '';
       const commaCount = (firstLine.match(/,/g) || []).length;
       const semicolonCount = (firstLine.match(/;/g) || []).length;
@@ -301,6 +304,7 @@
       globalData = [];
       dynamicMinesList = [];
       
+      // Wykrywamy kolumny kopalń (pomijamy pierwszą, czyli datę)
       headers.slice(1).forEach(h => {
         if (h && h.toLowerCase() !== 'value' && h.toLowerCase() !== 'description' && !dynamicMinesList.includes(h)) {
           dynamicMinesList.push(h);
@@ -366,7 +370,7 @@
     }
 
     function detectAnomalies(data, targetKey) {
-      const values = data.map(d => d[targetKey] || 0);
+      const values = data.map(d => d[targetKey] !== undefined ? d[targetKey] : 0);
       const stats = calculateStats(values);
       
       const kIqr = parseFloat(document.getElementById('param-iqr').value);
@@ -376,6 +380,7 @@
 
       data.forEach((row, i) => {
         let val = row[targetKey];
+        if (val === undefined) return;
         let tests = [];
 
         if (val < (stats.q1 - kIqr * stats.iqr) || val > (stats.q3 + kIqr * stats.iqr)) {
@@ -474,7 +479,7 @@
         dynamicMinesList.forEach((m, idx) => {
           datasets.push({
             label: m,
-            data: globalData.map(d => d[m]),
+            data: globalData.map(d => d[m] !== undefined ? d[m] : 0),
             backgroundColor: colors[idx % colors.length],
             stack: 'stack0'
           });
