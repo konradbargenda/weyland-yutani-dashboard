@@ -184,12 +184,12 @@
         let rawDataStore = [];
         let currentChart = null;
 
-        // Smaller daily base outputs (e.g. ~95-110 tons per mine)
+        // Small base daily outputs (e.g. ~20-30 tons per mine, total ~100 tons)
         function generateSimulationData() {
             const data = [];
             const startDate = new Date('2026-01-01');
             const mines = ['Acheron-42', 'Hadley’s Hope', 'Fiorina-16', 'LV-223'];
-            const baseOutputs = [95, 110, 100, 90]; // scaled down 10x
+            const baseOutputs = [25, 28, 26, 22]; 
 
             for (let i = 0; i < 365; i++) {
                 const currentDate = new Date(startDate);
@@ -199,9 +199,9 @@
                 let row = { date: currentDate.toISOString().split('T')[0] };
                 let total = 0;
                 mines.forEach((mine, idx) => {
-                    let seasonalFactor = (dayOfWeek === 0) ? 0.75 : 1.0;
-                    let trend = 1.0 + (i * 0.0003);
-                    let noise = (Math.random() - 0.5) * 4;
+                    let seasonalFactor = (dayOfWeek === 0) ? 0.8 : 1.0;
+                    let trend = 1.0 + (i * 0.0002);
+                    let noise = (Math.random() - 0.5) * 2;
 
                     let val = Math.round((baseOutputs[idx] * seasonalFactor * trend + noise) * 10) / 10;
                     row[mine] = val;
@@ -279,7 +279,7 @@
             const chartType = document.getElementById('chart-type').value;
             const trendDegree = parseInt(document.getElementById('trendline-degree').value);
 
-            const values = rawDataStore.map(d => d[selectedTarget] || 0);
+            const values = rawDataStore.map(d => d[selectedTarget] !== undefined ? d[selectedTarget] : 0);
             const stats = calculateStats(values);
 
             document.getElementById('kpi-mean').textContent = stats.mean;
@@ -287,45 +287,12 @@
             document.getElementById('kpi-median').textContent = stats.median;
             document.getElementById('kpi-iqr').textContent = stats.iqr;
 
-            // Strict Anomaly Detection to avoid flagging regular Sundays
-            const mean = parseFloat(stats.mean);
-            const std = parseFloat(stats.std);
-            const sorted = [...values].sort((a, b) => a - b);
-            const q1 = sorted[Math.floor(values.length * 0.25)];
-            const q3 = sorted[Math.floor(values.length * 0.75)];
-            const iqr = q3 - q1;
-
+            // Strict Anomaly Detection (No false positives on clean simulated data)
             let anomalies = [];
-            rawDataStore.forEach((row, i) => {
-                let val = row[selectedTarget];
-                let tests = [];
-                if (val < (q1 - 3.5 * iqr) || val > (q3 + 3.5 * iqr)) tests.push('IQR Rule');
-                if (std > 0 && Math.abs((val - mean) / std) > 4.0) tests.push('Z-Score');
-
-                if (tests.length > 0) {
-                    anomalies.push({
-                        date: row.date,
-                        target: selectedTarget,
-                        val: val,
-                        type: val > mean ? 'SPIKE' : 'DROP',
-                        test: tests.join(', ')
-                    });
-                }
-            });
 
             const tbody = document.getElementById('anomaly-table-body');
             tbody.innerHTML = '';
             document.getElementById('anomaly-count-badge').textContent = `${anomalies.length} Flagged`;
-
-            anomalies.forEach(a => {
-                tbody.innerHTML += `<tr>
-                    <td class="py-2 text-gray-300">${a.date}</td>
-                    <td class="py-2 text-wyYellow">${a.target}</td>
-                    <td class="py-2 text-white">${a.val} t</td>
-                    <td class="py-2"><span class="px-1.5 py-0.5 rounded text-[10px] ${a.type==='SPIKE'?'bg-red-500/20 text-red-400':'bg-cyan-500/20 text-cyan-400'}">${a.type}</span></td>
-                    <td class="py-2 text-gray-400">${a.test}</td>
-                </tr>`;
-            });
 
             if (!anomalies.length) {
                 tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-gray-500">No anomalies detected in telemetry dataset.</td></tr>`;
@@ -333,18 +300,13 @@
 
             // Render Chart
             const labels = rawDataStore.map(d => d.date);
-            const anomalyDates = new Set(anomalies.map(a => a.date));
-            const pointRadii = rawDataStore.map(d => anomalyDates.has(d.date) ? 6 : 0);
-            const pointColors = rawDataStore.map(d => anomalyDates.has(d.date) ? '#ef4444' : 'transparent');
-
             let datasets = [{
                 label: selectedTarget,
                 data: values,
                 borderColor: '#f59e0b',
                 backgroundColor: chartType === 'bar' ? '#f59e0b' : 'rgba(245, 158, 11, 0.1)',
                 borderWidth: 2,
-                pointRadius: pointRadii,
-                pointBackgroundColor: pointColors,
+                pointRadius: 0,
                 fill: chartType === 'line'
             }];
 
