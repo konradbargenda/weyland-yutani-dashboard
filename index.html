@@ -283,6 +283,12 @@
     }
 
     function parseCSV(csvText) {
+      // Automatyczne wykrywanie separatora (przecinek vs średnik)
+      const firstLine = csvText.split('\n')[0] || '';
+      const commaCount = (firstLine.match(/,/g) || []).length;
+      const semicolonCount = (firstLine.match(/;/g) || []).length;
+      const delimiter = semicolonCount > commaCount ? ';' : ',';
+
       const rows = [];
       let currentRow = [];
       let currentField = '';
@@ -297,7 +303,7 @@
           i++;
         } else if (char === '"') {
           inQuotes = !inQuotes;
-        } else if (char === ',' && !inQuotes) {
+        } else if (char === delimiter && !inQuotes) {
           currentRow.push(currentField);
           currentField = '';
         } else if ((char === '\r' || char === '\n') && !inQuotes) {
@@ -321,8 +327,8 @@
 
       const headers = rows[0].map(h => h.replace(/^["']|["']$/g, '').trim());
       globalData = [];
-      // Precyzyjne wyłapanie unikalnych nagłówków kopalń (pomijamy puste, datę, value, description)
       dynamicMinesList = [];
+      
       headers.slice(1).forEach(h => {
         if (h && h.toLowerCase() !== 'value' && h.toLowerCase() !== 'description' && !dynamicMinesList.includes(h)) {
           dynamicMinesList.push(h);
@@ -341,7 +347,7 @@
           let rawVal = colIdx !== -1 ? cols[colIdx] : '';
           
           if (rawVal) {
-            // Usunięcie ewentualnych spacji i zamiana przecinka na kropkę
+            // Zamiana polskiego przecinka dziesiętnego na kropkę, zachowując pełną precyzję
             rawVal = rawVal.replace(/\s+/g, '').replace(',', '.');
           }
           let val = parseFloat(rawVal);
@@ -350,7 +356,7 @@
           total += val;
         });
 
-        row['Total Output'] = Math.round(total * 100) / 100;
+        row['Total Output'] = Math.round(total * 1000) / 1000;
         globalData.push(row);
       }
 
@@ -380,10 +386,10 @@
       const iqr = q3 - q1;
 
       return {
-        mean: mean.toFixed(1),
-        std: std.toFixed(1),
-        median: median.toFixed(1),
-        iqr: iqr.toFixed(1),
+        mean: mean.toFixed(2),
+        std: std.toFixed(2),
+        median: median.toFixed(2),
+        iqr: iqr.toFixed(2),
         q1, q3, rawMean: mean, rawStd: std
       };
     }
@@ -400,14 +406,14 @@
         }
         let slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
         let intercept = (sumY - slope * sumX) / n;
-        return values.map((_, i) => Math.round((intercept + slope * i) * 10) / 10);
+        return values.map((_, i) => Math.round((intercept + slope * i) * 100) / 100);
       }
 
       const stats = calculateStats(values);
       return values.map((v, i) => {
         let normI = (i - n / 2) / (n / 2);
         let curve = Math.pow(normI, degree) * (stats.rawStd * 0.5);
-        return Math.round((stats.rawMean + curve) * 10) / 10;
+        return Math.round((stats.rawMean + curve) * 100) / 100;
       });
     }
 
