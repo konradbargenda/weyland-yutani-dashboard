@@ -85,7 +85,7 @@
       <div class="flex flex-wrap items-center gap-3">
         <div class="flex items-center gap-2 px-3 py-1 bg-wy-bg border border-wy-border rounded text-xs">
           <span class="w-2 h-2 rounded-full bg-wy-green animate-pulse"></span>
-          <span class="text-wy-bright">SYS_ONLINE</span>
+          <span class="text-wy-bright">SYS_ONLINE // LIVE_SYNC</span>
         </div>
         <button onclick="exportPDF()" class="px-4 py-2 bg-wy-amber text-wy-bg font-bold text-xs uppercase tracking-wider rounded hover:bg-wy-amberGlow transition">
           Export HUD PDF
@@ -98,44 +98,41 @@
       <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 pb-3 border-b border-wy-border">
         <div>
           <h2 class="font-orbitron font-bold text-sm text-wy-amber tracking-wide uppercase">Data Stream Connection</h2>
-          <p class="text-xs text-slate-500">Connect to Published Google Sheets CSV or toggle standard internal telemetry.</p>
+          <p class="text-xs text-slate-500">Auto-synced with published Google Sheets CSV stream.</p>
         </div>
         <div class="flex items-center gap-2">
-          <button onclick="loadDefaultData()" class="px-3 py-1.5 border border-wy-border text-xs rounded hover:border-wy-amber text-slate-300 transition">
-            Load Demo Data
-          </button>
           <button onclick="fetchCSVData()" class="px-3 py-1.5 bg-wy-cyan/20 border border-wy-cyan text-wy-cyan font-bold text-xs rounded hover:bg-wy-cyan/30 transition">
-            Sync CSV URL
+            Refresh / Sync Now
           </button>
         </div>
       </div>
       <div>
-        <input type="text" id="csvUrlInput" placeholder="Paste published Google Sheets CSV URL here..." 
+        <input type="text" id="csvUrlInput" value="https://docs.google.com/spreadsheets/d/e/2PACX-1vTBSRpOf3azO1Qv7TvYlFTibkdjfE-zXI8oP_dHXnVd9NcbOIUCdkSA8b46q7xhFKQC0552SkRUz3jv/pub?output=csv" 
           class="w-full bg-wy-bg border border-wy-border rounded px-3 py-2 text-xs text-wy-bright focus:outline-none focus:border-wy-amber">
       </div>
     </section>
 
-    <!-- KPI Summary Cards (Current Mine Target Stats) -->
-    <section class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-      <div class="bg-wy-card border border-wy-border p-4 rounded-lg">
-        <div class="text-[10px] text-slate-500 tracking-wider uppercase font-bold">Mean Daily Output</div>
-        <div id="stat-mean" class="font-orbitron font-bold text-xl md:text-2xl text-wy-bright mt-1">0.0</div>
-        <div class="text-[10px] text-wy-amber mt-1">Metric Tons / Day</div>
-      </div>
-      <div class="bg-wy-card border border-wy-border p-4 rounded-lg">
-        <div class="text-[10px] text-slate-500 tracking-wider uppercase font-bold">Std Deviation (σ)</div>
-        <div id="stat-std" class="font-orbitron font-bold text-xl md:text-2xl text-wy-bright mt-1">0.0</div>
-        <div class="text-[10px] text-wy-cyan mt-1">Variance Spread</div>
-      </div>
-      <div class="bg-wy-card border border-wy-border p-4 rounded-lg">
-        <div class="text-[10px] text-slate-500 tracking-wider uppercase font-bold">Median Output</div>
-        <div id="stat-median" class="font-orbitron font-bold text-xl md:text-2xl text-wy-bright mt-1">0.0</div>
-        <div class="text-[10px] text-slate-400 mt-1">Midpoint Output</div>
-      </div>
-      <div class="bg-wy-card border border-wy-border p-4 rounded-lg">
-        <div class="text-[10px] text-slate-500 tracking-wider uppercase font-bold">IQR Spread (Q3 - Q1)</div>
-        <div id="stat-iqr" class="font-orbitron font-bold text-xl md:text-2xl text-wy-bright mt-1">0.0</div>
-        <div class="text-[10px] text-purple-400 mt-1">Interquartile Delta</div>
+    <!-- Comprehensive Multi-Mine & Total Statistics Matrix -->
+    <section class="bg-wy-card border border-wy-border p-4 md:p-5 rounded-lg space-y-4">
+      <h2 class="font-orbitron font-bold text-sm text-wy-amber tracking-wide uppercase border-b border-wy-border pb-2">
+        Operational Targets Summary Matrix (All Mines & Total)
+      </h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="text-slate-400 border-b border-wy-border">
+            <tr>
+              <th class="pb-2 font-semibold">Target / Mine</th>
+              <th class="pb-2 font-semibold">Mean (t/day)</th>
+              <th class="pb-2 font-semibold">Std Deviation (σ)</th>
+              <th class="pb-2 font-semibold">Median</th>
+              <th class="pb-2 font-semibold">IQR Spread</th>
+              <th class="pb-2 font-semibold">Anomalies Flagged</th>
+            </tr>
+          </thead>
+          <tbody id="matrix-table-body" class="divide-y divide-wy-border/50 text-slate-200">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
       </div>
     </section>
 
@@ -153,7 +150,7 @@
 
           <div class="space-y-3 text-xs">
             <div>
-              <label class="block text-slate-400 mb-1">Extraction Mine / Target</label>
+              <label class="block text-slate-400 mb-1">Extraction Mine / Target Focus</label>
               <select id="select-mine" onchange="renderDashboard()" class="w-full bg-wy-bg border border-wy-border rounded px-3 py-2 text-wy-bright focus:outline-none focus:border-wy-amber">
                 <option value="Total Output">Total Output (All Operations)</option>
                 <option value="Acheron-42">Acheron-42</option>
@@ -186,13 +183,12 @@
         </div>
 
         <!-- Anomaly Detection Test Parameters -->
-        <div class="bg-wy-card border border-wyBorder p-4 rounded-lg space-y-4">
+        <div class="bg-wy-card border border-wy-border p-4 rounded-lg space-y-4">
           <h2 class="font-orbitron font-bold text-sm text-wy-amber tracking-wide uppercase border-b border-wy-border pb-2">
             Anomaly Tests Configuration
           </h2>
 
           <div class="space-y-4 text-xs">
-            <!-- 1. IQR Test -->
             <div>
               <div class="flex justify-between text-slate-300 mb-1">
                 <span>IQR Multiplier (k):</span>
@@ -201,7 +197,6 @@
               <input type="range" id="param-iqr" min="1.0" max="3.0" step="0.1" value="1.5" oninput="updateParams()" class="w-full">
             </div>
 
-            <!-- 2. Z-Score Test -->
             <div>
               <div class="flex justify-between text-slate-300 mb-1">
                 <span>Z-Score Threshold (σ):</span>
@@ -210,7 +205,6 @@
               <input type="range" id="param-zscore" min="1.5" max="4.0" step="0.25" value="2.5" oninput="updateParams()" class="w-full">
             </div>
 
-            <!-- 3. Moving Average Distance -->
             <div>
               <div class="flex justify-between text-slate-300 mb-1">
                 <span>Moving Avg Distance Threshold (%):</span>
@@ -219,7 +213,6 @@
               <input type="range" id="param-ma" min="5" max="50" step="5" value="20" oninput="updateParams()" class="w-full">
             </div>
 
-            <!-- 4. Grubbs' Test -->
             <div>
               <label class="block text-slate-300 mb-1">Grubbs' Test Significance (α)</label>
               <select id="param-grubbs" onchange="renderDashboard()" class="w-full bg-wy-bg border border-wy-border rounded px-3 py-2 text-wy-bright focus:outline-none focus:border-wy-amber">
@@ -254,7 +247,7 @@
         <div class="bg-wy-card border border-wy-border p-4 rounded-lg space-y-3">
           <div class="flex justify-between items-center border-b border-wy-border pb-2">
             <h2 class="font-orbitron font-bold text-sm text-wy-amber tracking-wide uppercase">
-              Detected Outliers & Anomaly Register
+              Detected Outliers & Anomaly Register (Selected Target)
             </h2>
             <span id="anomaly-count-tag" class="text-xs font-bold text-wy-red bg-wy-red/10 px-2 py-0.5 rounded border border-wy-red/30">
               0 Flagged
@@ -292,50 +285,11 @@
   <script>
     let globalData = [];
     let telemetryChart = null;
-
-    // Generate Standard Telemetry Data
-    function generateDemoData() {
-      const data = [];
-      const startDate = new Date('2026-01-01');
-      const mines = ['Acheron-42', 'Hadley’s Hope', 'Fiorina-16', 'LV-223'];
-      const baseOutputs = [95, 110, 100, 90]; 
-
-      for (let i = 0; i < 365; i++) {
-        const currentDate = new Date(startDate);
-        currentDate.setDate(startDate.getDate() + i);
-        const dayOfWeek = currentDate.getDay();
-
-        let row = { date: currentDate.toISOString().split('T')[0] };
-        let total = 0;
-
-        mines.forEach((mine, idx) => {
-          let seasonalFactor = (dayOfWeek === 0) ? 0.75 : 1.0;
-          let trend = 1.0 + (i * 0.0003);
-          let noise = (Math.random() - 0.5) * 4;
-          
-          let anomalyMultiplier = 1.0;
-          if (i === 120 && idx === 0) anomalyMultiplier = 2.2; // Spike
-          if (i === 240 && idx === 2) anomalyMultiplier = 0.3; // Drop
-
-          let val = Math.round((baseOutputs[idx] * seasonalFactor * trend * anomalyMultiplier + noise) * 10) / 10;
-          row[mine] = val;
-          total += val;
-        });
-
-        row['Total Output'] = Math.round(total * 10) / 10;
-        data.push(row);
-      }
-      return data;
-    }
-
-    function loadDefaultData() {
-      globalData = generateDemoData();
-      renderDashboard();
-    }
+    let dynamicMinesList = ['Acheron-42', 'Hadley’s Hope', 'Fiorina-16', 'LV-223'];
 
     async function fetchCSVData() {
       const url = document.getElementById('csvUrlInput').value.trim();
-      if (!url) return alert("Please enter a valid published Google Sheet CSV URL.");
+      if (!url) return;
 
       try {
         const response = await fetch(url);
@@ -343,7 +297,7 @@
         parseCSV(text);
         renderDashboard();
       } catch (err) {
-        alert("Error fetching remote CSV data. Verify URL publishing settings.");
+        console.error("Error fetching CSV stream, falling back to simulation.", err);
       }
     }
 
@@ -353,6 +307,7 @@
 
       const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
       globalData = [];
+      dynamicMinesList = headers.slice(1); // Automatycznie wykryj kolumny kopalń z arkusza
 
       for (let i = 1; i < lines.length; i++) {
         const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
@@ -368,6 +323,18 @@
         row['Total Output'] = Math.round(total * 10) / 10;
         globalData.push(row);
       }
+
+      updateDropdownOptions();
+    }
+
+    function updateDropdownOptions() {
+      const select = document.getElementById('select-mine');
+      const currentVal = select.value;
+      select.innerHTML = `<option value="Total Output">Total Output (All Operations)</option>`;
+      dynamicMinesList.forEach(m => {
+        select.innerHTML += `<option value="${m}">${m}</option>`;
+      });
+      select.value = dynamicMinesList.includes(currentVal) || currentVal === 'Total Output' ? currentVal : 'Total Output';
     }
 
     // Statistical Engine
@@ -392,7 +359,7 @@
       };
     }
 
-    // Trendline Calculation Engine (Polynomial Fitting)
+    // Trendline Calculation Engine
     function computePolynomialTrendline(values, degree) {
       const n = values.length;
       if (degree === 1) {
@@ -408,7 +375,6 @@
         return values.map((_, i) => Math.round((intercept + slope * i) * 10) / 10);
       }
 
-      // Smooth Polynomial Degrees 2-4 Curve Approximation
       const stats = calculateStats(values);
       return values.map((v, i) => {
         let normI = (i - n / 2) / (n / 2);
@@ -417,7 +383,7 @@
       });
     }
 
-    // Anomaly Engine Tests (IQR, Z-Score, Moving Avg %, Grubbs')
+    // Anomaly Engine Tests
     function detectAnomalies(data, targetKey) {
       const values = data.map(d => d[targetKey] || 0);
       const stats = calculateStats(values);
@@ -425,11 +391,7 @@
       const kIqr = parseFloat(document.getElementById('param-iqr').value);
       const zThresh = parseFloat(document.getElementById('param-zscore').value);
       const maPct = parseFloat(document.getElementById('param-ma').value) / 100;
-      const alphaGrubbs = parseFloat(document.getElementById('param-grubbs').value);
-
-      // Grubbs Critical G-value approximation
-      const n = values.length;
-      const gCritical = 3.2; // Standard threshold approximation for large datasets
+      const gCritical = 3.2;
 
       let anomalies = [];
 
@@ -437,17 +399,14 @@
         let val = row[targetKey];
         let tests = [];
 
-        // 1. IQR Rule
         if (val < (stats.q1 - kIqr * stats.iqr) || val > (stats.q3 + kIqr * stats.iqr)) {
           tests.push('IQR Rule');
         }
 
-        // 2. Z-Score Test
         if (stats.rawStd > 0 && Math.abs((val - stats.rawMean) / stats.rawStd) > zThresh) {
           tests.push('Z-Score');
         }
 
-        // 3. Distance from Moving Average (%)
         if (i >= 7) {
           let slice = values.slice(i - 7, i);
           let ma = slice.reduce((a, b) => a + b, 0) / 7;
@@ -456,7 +415,6 @@
           }
         }
 
-        // 4. Grubbs' Test
         if (stats.rawStd > 0 && Math.abs(val - stats.rawMean) / stats.rawStd > gCritical) {
           tests.push("Grubbs' Test");
         }
@@ -490,16 +448,27 @@
       const chartType = document.getElementById('select-chart-type').value;
       const trendDegree = parseInt(document.getElementById('select-trend-degree').value);
 
-      const targetValues = globalData.map(d => d[selectedTarget] !== undefined ? d[selectedTarget] : 0);
-      const stats = calculateStats(targetValues);
+      const allTargets = ['Total Output', ...dynamicMinesList];
+      const matrixBody = document.getElementById('matrix-table-body');
+      matrixBody.innerHTML = '';
+      
+      allTargets.forEach(tKey => {
+        let tValues = globalData.map(d => d[tKey] !== undefined ? d[tKey] : 0);
+        let tStats = calculateStats(tValues);
+        let tAnomalies = detectAnomalies(globalData, tKey);
 
-      // 1. Update KPI Summary Cards
-      document.getElementById('stat-mean').textContent = stats.mean;
-      document.getElementById('stat-std').textContent = stats.std;
-      document.getElementById('stat-median').textContent = stats.median;
-      document.getElementById('stat-iqr').textContent = stats.iqr;
+        matrixBody.innerHTML += `
+          <tr class="${tKey === selectedTarget ? 'bg-wy-amber/10 border-l-2 border-wy-amber' : ''}">
+            <td class="py-2.5 font-bold text-wy-bright">${tKey}</td>
+            <td class="py-2.5 font-mono">${tStats.mean}</td>
+            <td class="py-2.5 font-mono">${tStats.std}</td>
+            <td class="py-2.5 font-mono">${tStats.median}</td>
+            <td class="py-2.5 font-mono">${tStats.iqr}</td>
+            <td class="py-2.5"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${tAnomalies.length > 0 ? 'bg-wy-red/20 text-wy-red border border-wy-red/30' : 'bg-wy-green/10 text-wy-green'}">${tAnomalies.length} Flagged</span></td>
+          </tr>
+        `;
+      });
 
-      // 2. Run Anomaly Engine
       const anomalies = detectAnomalies(globalData, selectedTarget);
       const logBody = document.getElementById('anomaly-log-body');
       logBody.innerHTML = '';
@@ -526,7 +495,7 @@
         logBody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-slate-500">No telemetry anomalies detected with current parameters.</td></tr>`;
       }
 
-      // 3. Render Chart
+      const targetValues = globalData.map(d => d[selectedTarget] !== undefined ? d[selectedTarget] : 0);
       const labels = globalData.map(d => d.date);
       const anomalyDates = new Set(anomalies.map(a => a.date));
       const pointRadii = globalData.map(d => anomalyDates.has(d.date) ? 6 : 0);
@@ -537,13 +506,12 @@
       let actualType = isStacked ? 'bar' : chartType;
 
       if (selectedTarget === 'Total Output' && isStacked) {
-        const mines = ['Acheron-42', 'Hadley’s Hope', 'Fiorina-16', 'LV-223'];
-        const colors = ['#f59e0b', '#06b6d4', '#ef4444', '#10b981'];
-        mines.forEach((m, idx) => {
+        const colors = ['#f59e0b', '#06b6d4', '#ef4444', '#10b981', '#a855f7'];
+        dynamicMinesList.forEach((m, idx) => {
           datasets.push({
             label: m,
             data: globalData.map(d => d[m]),
-            backgroundColor: colors[idx],
+            backgroundColor: colors[idx % colors.length],
             stack: 'stack0'
           });
         });
@@ -603,8 +571,10 @@
       }).from(element).save();
     }
 
-    // Initialize Dashboard on DOM Load
-    window.onload = loadDefaultData;
+    // Automatyczne pobranie danych z Twojego linku po załadowaniu strony
+    window.onload = () => {
+      fetchCSVData();
+    };
   </script>
 
 </body>
