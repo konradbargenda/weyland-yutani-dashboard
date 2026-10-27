@@ -283,7 +283,7 @@
     }
 
     function parseCSV(csvText) {
-      // Automatyczne wykrywanie separatora (przecinek vs średnik)
+      // Automatyczne rozpoznanie separatora (przecinek vs średnik)
       const firstLine = csvText.split('\n')[0] || '';
       const commaCount = (firstLine.match(/,/g) || []).length;
       const semicolonCount = (firstLine.match(/;/g) || []).length;
@@ -347,7 +347,7 @@
           let rawVal = colIdx !== -1 ? cols[colIdx] : '';
           
           if (rawVal) {
-            // Zamiana polskiego przecinka dziesiętnego na kropkę, zachowując pełną precyzję
+            // Czyszczenie i zamiana przecinka na kropkę dla pełnej precyzji zmiennoprzecinkowej
             rawVal = rawVal.replace(/\s+/g, '').replace(',', '.');
           }
           let val = parseFloat(rawVal);
