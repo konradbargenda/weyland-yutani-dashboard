@@ -153,10 +153,6 @@
               <label class="block text-slate-400 mb-1">Extraction Mine / Target Focus</label>
               <select id="select-mine" onchange="renderDashboard()" class="w-full bg-wy-bg border border-wy-border rounded px-3 py-2 text-wy-bright focus:outline-none focus:border-wy-amber">
                 <option value="Total Output">Total Output (All Operations)</option>
-                <option value="Acheron-42">Acheron-42</option>
-                <option value="Hadley’s Hope">Hadley’s Hope</option>
-                <option value="Fiorina-16">Fiorina-16</option>
-                <option value="LV-223">LV-223</option>
               </select>
             </div>
 
@@ -285,7 +281,7 @@
   <script>
     let globalData = [];
     let telemetryChart = null;
-    let dynamicMinesList = ['Acheron-42', 'Hadley’s Hope', 'Fiorina-16', 'LV-223'];
+    let dynamicMinesList = [];
 
     async function fetchCSVData() {
       const url = document.getElementById('csvUrlInput').value.trim();
@@ -297,7 +293,7 @@
         parseCSV(text);
         renderDashboard();
       } catch (err) {
-        console.error("Error fetching CSV stream, falling back to simulation.", err);
+        console.error("Error fetching CSV stream.", err);
       }
     }
 
@@ -307,7 +303,7 @@
 
       const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
       globalData = [];
-      dynamicMinesList = headers.slice(1); // Automatycznie wykryj kolumny kopalń z arkusza
+      dynamicMinesList = headers.slice(1);
 
       for (let i = 1; i < lines.length; i++) {
         const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
@@ -337,7 +333,6 @@
       select.value = dynamicMinesList.includes(currentVal) || currentVal === 'Total Output' ? currentVal : 'Total Output';
     }
 
-    // Statistical Engine
     function calculateStats(arr) {
       if (!arr || !arr.length) return { mean: 0, std: 0, median: 0, iqr: 0 };
       const n = arr.length;
@@ -359,7 +354,6 @@
       };
     }
 
-    // Trendline Calculation Engine
     function computePolynomialTrendline(values, degree) {
       const n = values.length;
       if (degree === 1) {
@@ -383,7 +377,6 @@
       });
     }
 
-    // Anomaly Engine Tests
     function detectAnomalies(data, targetKey) {
       const values = data.map(d => d[targetKey] || 0);
       const stats = calculateStats(values);
@@ -440,7 +433,6 @@
       renderDashboard();
     }
 
-    // Main Render Pipeline
     function renderDashboard() {
       if (!globalData || !globalData.length) return;
 
@@ -571,7 +563,7 @@
       }).from(element).save();
     }
 
-    // Automatyczne pobranie danych z Twojego linku po załadowaniu strony
+    // Automatyczne pobranie danych z poprawionego linku CSV od razu po wejściu
     window.onload = () => {
       fetchCSVData();
     };
