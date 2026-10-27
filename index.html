@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weyland-Yutani Corp // Mining Operations Analytics</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            wy: {
+              gold: '#D4AF37',
+              yellow: '#E5A93C',
+              dark: '#0B0F17',
+              card: '#121824',
+              border: '#1F293D',
+              accent: '#00F0FF',
+              alert: '#FF3366',
+              success: '#00FF88'
+            }
+          },
+          fontFamily: {
+            mono: ['JetBrains Mono', 'Courier New', 'monospace'],
+            sans: ['Inter', 'system-ui', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- jsPDF & html2canvas for PDF Generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <!-- PapaParse for CSV parsing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+  <style>
+    body {
+      background-color: #0B0F17;
+      color: #E2E8F0;
+      font-family: 'Inter', sans-serif;
+    }
+    .wy-grid-bg {
+      background-image: linear-gradient(to right, rgba(31, 41, 61, 0.2) 1px, transparent 1px),
+                        linear-gradient(to bottom, rgba(31, 41, 61, 0.2) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+    .wy-glow {
+      box-shadow: 0 0 15px rgba(212, 175, 55, 0.15);
+    }
+    .wy-glow-cyan {
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.15);
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0B0F17;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1F293D;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #D4AF37;
+    }
+  </style>
+</head>
+<body class="wy-grid-bg min-h-screen flex flex-col antialiased selection:bg-wy-gold selection:text-black">
+
+  <!-- Navigation Banner -->
+  <header class="bg-wy-card border-b border-wy-border sticky top-0 z-50 backdrop-blur-md bg-opacity-90">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="bg-wy-gold text-black font-bold font-mono px-2 py-1 rounded text-xs tracking-wider flex items-center space-x-1">
+          <i data-lucide="shield-alert" class="w-4 h-4"></i>
+          <span>WEYLAND-YUTANI</span>
+        </div>
+        <div class="h-4 w-px bg-wy-border"></div>
+        <h1 class="text-sm font-mono font-semibold tracking-wider text-slate-200 uppercase flex items-center gap-2">
+          <span>RESOURCE EXTRACTION ANALYTICS</span>
+          <span class="text-xs text-wy-gold bg-wy-gold/10 px-2 py-0.5 rounded border border-wy-gold/20">V 4.8.2</span>
+        </h1>
+      </div>
+
+      <!-- PDF Export Button & System Indicator -->
+      <div class="flex items-center space-x-4">
+        <div class="hidden md:flex items-center space-x-2 text-xs font-mono text-slate-400">
+          <span class="inline-block w-2 h-2 rounded-full bg-wy-success animate-pulse"></span>
+          <span>SYSTEM ACTIVE // SECURE TELEMETRY LINK</span>
+        </div>
+        <button id="exportPdfBtn" onclick="generatePDFReport()" class="bg-wy-gold hover:bg-yellow-500 text-black font-mono font-semibold text-xs px-3 py-2 rounded flex items-center space-x-2 transition-all wy-glow">
+          <i data-lucide="file-text" class="w-4 h-4"></i>
+          <span>GENERATE PDF REPORT</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- Data Source Integration Panel -->
+    <section class="bg-wy-card border border-wy-border rounded-xl p-5 shadow-lg relative overflow-hidden">
+      <div class="absolute top-0 right-0 w-32 h-32 bg-wy-gold/5 rounded-full blur-2xl pointer-events-none"></div>
+
+      <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 border-b border-wy-border/60 pb-4 mb-4">
+        <div>
+          <h2 class="text-lg font-mono font-bold text-wy-gold flex items-center gap-2">
+            <i data-lucide="database" class="w-5 h-5"></i>
+            <span>DATA SOURCE INTEGRATION</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">Connect a live published Google Spreadsheet CSV URL or run the synthetic generator.</p>
+        </div>
+
+        <div class="flex items-center bg-wy-dark border border-wy-border rounded-lg p-1 text-xs font-mono">
+          <button id="modeSyntheticBtn" onclick="setDataSourceMode('synthetic')" class="px-3 py-1.5 rounded-md font-semibold transition-all bg-wy-gold text-black">
+            Synthetic Generator
+          </button>
+          <button id="modeGoogleBtn" onclick="setDataSourceMode('google')" class="px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition-all">
+            Google Sheets CSV Link
+          </button>
+        </div>
+      </div>
+
+      <!-- Google Sheet URL Input Panel -->
+      <div id="googleSheetPanel" class="hidden space-y-3">
+        <label class="block text-xs font-mono text-slate-300">Published Google Spreadsheet CSV Link (pub?output=csv):</label>
+        <div class="flex gap-2">
+          <input type="text" id="csvUrlInput" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv" class="flex-1 bg-wy-dark border border-wy-border rounded-lg px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:border-wy-gold">
+          <button onclick="loadGoogleSheetData()" class="bg-wy-border hover:bg-slate-700 text-wy-gold font-mono text-xs px-4 py-2 rounded-lg transition-all flex items-center gap-1">
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+            <span>Load Live Data</span>
+          </button>
+        </div>
+        <p class="text-[11px] text-slate-500 font-mono">Note: Go to File > Share > Publish to web > CSV in Google Sheets to obtain your link.</p>
+      </div>
+
+      <!-- Synthetic Generator Parameters Panel -->
+      <div id="syntheticPanel" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div>
+          <label class="block text-xs font-mono text-slate-400 mb-1">Distribution Type</label>
+          <select id="genDist" onchange="triggerDataUpdate()" class="w-full bg-wy-dark border border-wy-border rounded-lg px-3 py-1.5 text-xs font-mono text-slate-200 focus:outline-none focus:border-wy-gold">
+            <option value="Normal">Normal Distribution</option>
+            <option value="Uniform">Uniform Distribution</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-mono text-slate-400 mb-1">Base Output (Mean): <span id="genBaseVal" class="text-wy-gold">1000</span></label>
+          <input type="range" id="genBase" min="200" max="3000" step="50" value="1000" oninput="document.getElementById('genBaseVal').innerText=this.value; triggerDataUpdate();" class="w-full accent-wy-gold">
+        </div>
+
+        <div>
+          <label class="block text-xs font-mono text-slate-400 mb-1">Smoothing Factor ($\alpha$): <span id="genAlphaVal" class="text-wy-gold">0.70</span></label>
+          <input type="range" id="genAlpha" min="0" max="0.95" step="0.05" value="0.70" oninput="document.getElementById('genAlphaVal').innerText=parseFloat(this.value).toFixed(2); triggerDataUpdate();" class="w-full accent-wy-gold">
+        </div>
+
+        <div>
+          <label class="block text-xs font-mono text-slate-400 mb-1">Sunday Factor: <span id="genSundayVal" class="text-wy-gold">0.60</span></label>
+          <input type="range" id="genSunday" min="0.1" max="1.0" step="0.05" value="0.60" oninput="document.getElementById('genSundayVal').innerText=parseFloat(this.value).toFixed(2); triggerDataUpdate();" class="w-full accent-wy-gold">
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Workspace Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+      <!-- Left Sidebar: Controls -->
+      <aside class="space-y-6 lg:col-span-1">
+
+        <!-- Anomaly Engine Controls -->
+        <div class="bg-wy-card border border-wy-border rounded-xl p-5 space-y-4">
+          <h3 class="text-xs font-mono font-bold text-wy-gold uppercase tracking-wider flex items-center justify-between border-b border-wy-border pb-2">
+            <span class="flex items-center gap-1.5"><i data-lucide="sliders" class="w-4 h-4"></i> Outlier Test Thresholds</span>
+          </h3>
+
+          <!-- IQR Rule -->
+          <div class="space-y-1">
+            <div class="flex justify-between text-xs font-mono">
+              <span class="text-slate-300">IQR Multiplier ($k$)</span>
+              <span id="iqrKVal" class="text-wy-gold">1.5</span>
+            </div>
+            <input type="range" id="iqrK" min="1.0" max="3.0" step="0.1" value="1.5" oninput="document.getElementById('iqrKVal').innerText=this.value; updateAnalytics();" class="w-full accent-wy-gold">
+          </div>
+
+          <!-- Z-Score -->
+          <div class="space-y-1">
+            <div class="flex justify-between text-xs font-mono">
+              <span class="text-slate-300">Z-Score Cutoff ($\sigma$)</span>
+              <span id="zScoreVal" class="text-wy-gold">2.5</span>
+            </div>
+            <input type="range" id="zScoreThreshold" min="1.5" max="4.0" step="0.1" value="2.5" oninput="document.getElementById('zScoreVal').innerText=this.value; updateAnalytics();" class="w-full accent-wy-gold">
+          </div>
+
+          <!-- Moving Average -->
+          <div class="space-y-1">
+            <div class="flex justify-between text-xs font-mono">
+              <span class="text-slate-300">Moving Avg Window ($N$)</span>
+              <span id="maWindowVal" class="text-wy-gold">7</span>
+            </div>
+            <input type="range" id="maWindow" min="3" max="30" step="1" value="7" oninput="document.getElementById('maWindowVal').innerText=this.value; updateAnalytics();" class="w-full accent-wy-gold">
+          </div>
+
+          <div class="space-y-1">
+            <div class="flex justify-between text-xs font-mono">
+              <span class="text-slate-300">MA Distance Threshold</span>
+              <span id="maThresholdVal" class="text-wy-gold">25%</span>
+            </div>
+            <input type="range" id="maThreshold" min="10" max="60" step="5" value="25" oninput="document.getElementById('maThresholdVal').innerText=this.value+'%'; updateAnalytics();" class="w-full accent-wy-gold">
+          </div>
+
+          <!-- Grubbs Test Significance -->
+          <div class="space-y-1">
+            <div class="flex justify-between text-xs font-mono">
+              <span class="text-slate-300">Grubbs' Alpha ($\alpha$)</span>
+              <span id="grubbsAlphaVal" class="text-wy-gold">0.05</span>
+            </div>
+            <select id="grubbsAlpha" onchange="updateAnalytics()" class="w-full bg-wy-dark border border-wy-border rounded px-2 py-1 text-xs font-mono text-slate-200">
+              <option value="0.05">0.05 (Standard)</option>
+              <option value="0.01">0.01 (Strict)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Visualizations Config -->
+        <div class="bg-wy-card border border-wy-border rounded-xl p-5 space-y-4">
+          <h3 class="text-xs font-mono font-bold text-wy-gold uppercase tracking-wider flex items-center justify-between border-b border-wy-border pb-2">
+            <span class="flex items-center gap-1.5"><i data-lucide="bar-chart-2" class="w-4 h-4"></i> Display Settings</span>
+          </h3>
+
+          <div>
+            <label class="block text-xs font-mono text-slate-300 mb-1">Chart Type</label>
+            <div class="grid grid-cols-3 gap-1 bg-wy-dark border border-wy-border p-1 rounded-lg text-xs font-mono text-center">
+              <button onclick="setChartType('line')" id="btnChartLine" class="py-1 rounded bg-wy-gold text-black font-semibold">Line</button>
+              <button onclick="setChartType('bar')" id="btnChartBar" class="py-1 rounded text-slate-400 hover:text-white">Bar</button>
+              <button onclick="setChartType('stacked')" id="btnChartStacked" class="py-1 rounded text-slate-400 hover:text-white">Stacked</button>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-mono text-slate-300 mb-1">Polynomial Trendline</label>
+            <select id="polyDegree" onchange="updateAnalytics()" class="w-full bg-wy-dark border border-wy-border rounded px-2 py-1.5 text-xs font-mono text-slate-200">
+              <option value="0">None</option>
+              <option value="1" selected>Degree 1 (Linear)</option>
+              <option value="2">Degree 2 (Quadratic)</option>
+              <option value="3">Degree 3 (Cubic)</option>
+              <option value="4">Degree 4 (Quartic)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-mono text-slate-300 mb-1">Filter Mine View</label>
+            <select id="mineSelectFilter" onchange="updateAnalytics()" class="w-full bg-wy-dark border border-wy-border rounded px-2 py-1.5 text-xs font-mono text-slate-200">
+              <option value="ALL">All Mines + Aggregate</option>
+            </select>
+          </div>
+        </div>
+
+      </aside>
+
+      <!-- Center / Right Panel -->
+      <section class="lg:col-span-3 space-y-6">
+
+        <!-- Stat KPI Cards -->
+        <div id="kpiGrid" class="grid grid-cols-2 sm:grid-cols-4 gap-4"></div>
+
+        <!-- Chart Container -->
+        <div class="bg-wy-card border border-wy-border rounded-xl p-5 relative wy-glow-cyan">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-4 border-b border-wy-border pb-3">
+            <div>
+              <h3 class="text-sm font-mono font-bold text-slate-200 uppercase flex items-center gap-2">
+                <i data-lucide="trending-up" class="w-4 h-4 text-wy-accent"></i>
+                <span>EXTRACTION TIMESERIES & ANOMALY OVERLAY</span>
+              </h3>
+              <p class="text-xs text-slate-400">Interactive telemetry curves with computed polynomial trendlines & detected anomaly markers.</p>
+            </div>
+            <div id="chartBadge" class="text-xs font-mono px-2.5 py-1 rounded bg-wy-accent/10 border border-wy-accent/30 text-wy-accent">
+              Active View: Line
+            </div>
+          </div>
+
+          <!-- Canvas -->
+          <div class="relative h-80 sm:h-96 w-full">
+            <canvas id="mainChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Statistical Breakdown Table -->
+        <div class="bg-wy-card border border-wy-border rounded-xl p-5 overflow-hidden">
+          <h3 class="text-xs font-mono font-bold text-wy-gold uppercase tracking-wider mb-4 flex items-center gap-2">
+            <i data-lucide="table" class="w-4 h-4"></i>
+            <span>STATISTICAL METRICS BREAKDOWN (DAILY OUTPUT)</span>
+          </h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left font-mono text-xs text-slate-300">
+              <thead>
+                <tr class="bg-wy-dark text-slate-400 border-b border-wy-border uppercase">
+                  <th class="py-2.5 px-3">Mine ID / Target</th>
+                  <th class="py-2.5 px-3">Mean ($\mu$)</th>
+                  <th class="py-2.5 px-3">Std Dev ($\sigma$)</th>
+                  <th class="py-2.5 px-3">Median</th>
+                  <th class="py-2.5 px-3">IQR (Q3 - Q1)</th>
+                  <th class="py-2.5 px-3">Detected Outliers</th>
+                </tr>
+              </thead>
+              <tbody id="statsTableBody" class="divide-y divide-wy-border/50"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Detected Anomalies Log -->
+        <div class="bg-wy-card border border-wy-border rounded-xl p-5">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xs font-mono font-bold text-wy-alert uppercase tracking-wider flex items-center gap-2">
+              <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+              <span>DETECTED ANOMALIES & INCIDENTS LOG</span>
+            </h3>
+            <span id="anomalyBadgeCount" class="bg-wy-alert/10 text-wy-alert border border-wy-alert/30 text-xs font-mono px-2 py-0.5 rounded">
+              0 Incidents
+            </span>
+          </div>
+
+          <div class="overflow-y-auto max-h-60 rounded border border-wy-border">
+            <table class="w-full text-left font-mono text-xs text-slate-300">
+              <thead class="bg-wy-dark text-slate-400 sticky top-0 border-b border-wy-border uppercase">
+                <tr>
+                  <th class="py-2 px-3">Date</th>
+                  <th class="py-2 px-3">Mine Target</th>
+                  <th class="py-2 px-3">Recorded Value</th>
+                  <th class="py-2 px-3">Incident Type</th>
+                  <th class="py-2 px-3">Detection Tests Triggered</th>
+                </tr>
+              </thead>
+              <tbody id="anomaliesTableBody" class="divide-y divide-wy-border/40 bg-wy-dark/40"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Printable PDF Report Engine Container -->
+  <div id="pdfReportContainer" class="hidden bg-white text-slate-900 p-8 max-w-4xl mx-auto font-sans">
+    <div class="border-b-2 border-amber-600 pb-4 mb-6 flex justify-between items-center">
+      <div>
+        <h1 class="text-2xl font-bold font-mono text-slate-900 tracking-tight">WEYLAND-YUTANI CORPORATION</h1>
+        <p class="text-xs font-mono text-amber-700 font-semibold tracking-wider uppercase">Resource Extraction Analytics Report</p>
+      </div>
+      <div class="text-right text-xs font-mono text-slate-500">
+        <p>CONFIDENTIAL // INTERNAL USE ONLY</p>
+        <p id="pdfReportDate">Date: 2026-10-27</p>
+      </div>
+    </div>
+
+    <div class="mb-6">
+      <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800 border-b pb-1 mb-2">1. Executive Summary & Parameters</h2>
+      <div id="pdfSummaryStats" class="grid grid-cols-3 gap-4 text-xs font-mono bg-slate-100 p-3 rounded"></div>
+    </div>
+
+    <div class="mb-6">
+      <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800 border-b pb-1 mb-2">2. Statistical Metrics Breakdown</h2>
+      <table class="w-full text-left font-mono text-xs border border-slate-300">
+        <thead class="bg-slate-200">
+          <tr>
+            <th class="p-2 border">Mine Target</th>
+            <th class="p-2 border">Mean</th>
+            <th class="p-2 border">Std Dev</th>
+            <th class="p-2 border">Median</th>
+            <th class="p-2 border">IQR</th>
+            <th class="p-2 border">Outliers</th>
+          </tr>
+        </thead>
+        <tbody id="pdfStatsTable"></tbody>
+      </table>
+    </div>
+
+    <div class="mb-6">
+      <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800 border-b pb-1 mb-2">3. Primary Extraction Anomaly Log</h2>
+      <table class="w-full text-left font-mono text-xs border border-slate-300">
+        <thead class="bg-slate-200">
+          <tr>
+            <th class="p-2 border">Date</th>
+            <th class="p-2 border">Mine</th>
+            <th class="p-2 border">Output</th>
+            <th class="p-2 border">Anomaly Type</th>
+            <th class="p-2 border">Detection Test(s)</th>
+          </tr>
+        </thead>
+        <tbody id="pdfAnomaliesTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer class="bg-wy-card border-t border-wy-border py-4 mt-8">
+    <div class="max-w-7xl mx-auto px-4 text-center text-xs font-mono text-slate-500">
+      WEYLAND-YUTANI CORP // "BUILDING BETTER WORLDS" // DATA ENGINEERING GROUP TASK #5
+    </div>
+  </footer>
+
+  <!-- Application Logic -->
+  <script>
+    let appState = {
+      sourceMode: 'synthetic',
+      dataset: [],
+      mines: ['Acheron-42', 'Hadley\'s Hope', 'Fiorina-16', 'LV-223'],
+      chartType: 'line',
+      chartInstance: null
+    };
+
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      populateMineFilterSelect();
+      generateSyntheticData();
+      updateAnalytics();
+    });
+
+    function generateSyntheticData() {
+      const dist = document.getElementById('genDist').value;
+      const base = parseFloat(document.getElementById('genBase').value);
+      const alpha = parseFloat(document.getElementById('genAlpha').value);
+      const sundayFactor = parseFloat(document.getElementById('genSunday').value);
+      const spread = base * 0.15;
+      const trend = 0.0005;
+
+      const startDate = new Date(2026, 0, 1);
+      const daysCount = 365;
+      const mines = appState.mines;
+      const generated = [];
+
+      let prevVals = mines.reduce((acc, m) => ({ ...acc, [m]: base }), {});
+
+      for (let i = 0; i < daysCount; i++) {
+        const currentDate = new Date(startDate);
+        currentDate.setDate(startDate.getDate() + i);
+        const dateStr = currentDate.toISOString().split('T')[0];
+        const isSunday = currentDate.getDay() === 0;
+
+        let anomalyMult = 1.0;
+        if (i >= 104 && i <= 107) anomalyMult = 0.45;
+        if (i >= 220 && i <= 223) anomalyMult = 1.60;
+
+        const row = { date: dateStr };
+        let totalOutput = 0;
+
+        mines.forEach(m => {
+          let rawDraw = 0;
+          if (dist === 'Normal') {
+            rawDraw = gaussianRandom(base, spread);
+          } else {
+            rawDraw = base + (Math.random() * 2 - 1) * spread;
+          }
+
+          const trendAdj = rawDraw * Math.pow(1 + trend, i);
+          const smoothed = (alpha * prevVals[m]) + ((1 - alpha) * trendAdj);
+          prevVals[m] = smoothed;
+
+          const dowMult = isSunday ? sundayFactor : 1.0;
+          const finalVal = Math.max(0, smoothed * dowMult * anomalyMult);
+
+          row[m] = Math.round(finalVal * 10) / 10;
+          totalOutput += row[m];
+        });
+
+        row['Total Output'] = Math.round(totalOutput * 10) / 10;
+        generated.push(row);
+      }
+
+      appState.dataset = generated;
+    }
+
+    function gaussianRandom(mean, stdDev) {
+      const u1 = Math.random();
+      const u2 = Math.random();
+      const z0 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+      return z0 * stdDev + mean;
+    }
+
+    function setDataSourceMode(mode) {
+      appState.sourceMode = mode;
+      const synthBtn = document.getElementById('modeSyntheticBtn');
+      const googleBtn = document.getElementById('modeGoogleBtn');
+      const synthPanel = document.getElementById('syntheticPanel');
+      const googlePanel = document.getElementById('googleSheetPanel');
+
+      if (mode === 'synthetic') {
+        synthBtn.className = 'px-3 py-1.5 rounded-md font-semibold transition-all bg-wy-gold text-black';
+        googleBtn.className = 'px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition-all';
+        synthPanel.classList.remove('hidden');
+        googlePanel.classList.add('hidden');
+        triggerDataUpdate();
+      } else {
+        googleBtn.className = 'px-3 py-1.5 rounded-md font-semibold transition-all bg-wy-gold text-black';
+        synthBtn.className = 'px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition-all';
+        googlePanel.classList.remove('hidden');
+        synthPanel.classList.add('hidden');
+      }
+    }
+
+    function loadGoogleSheetData() {
+      const url = document.getElementById('csvUrlInput').value.trim();
+      if (!url) {
+        alert('Please enter a valid published Google Sheet CSV URL.');
+        return;
+      }
+
+      Papa.parse(url, {
+        download: true,
+        header: true,
+        dynamicTyping: true,
+        complete: function(results) {
+          if (results.data && results.data.length > 0) {
+            parseCSVToDataset(results.data);
+            updateAnalytics();
+          } else {
+            alert('Failed to parse CSV data from link.');
+          }
+        },
+        error: function(err) {
+          alert('Error fetching Google Sheet: ' + err.message);
+        }
+      });
+    }
+
+    function parseCSVToDataset(csvRows) {
+      const sample = csvRows[0];
+      const keys = Object.keys(sample);
+      const dateKey = keys.find(k => k.toLowerCase().includes('date')) || keys[0];
+      const mineKeys = keys.filter(k => k !== dateKey && typeof sample[k] === 'number');
+
+      appState.mines = mineKeys;
+      populateMineFilterSelect();
+
+      appState.dataset = csvRows.filter(r => r[dateKey]).map(r => {
+        const item = { date: String(r[dateKey]) };
+        let total = 0;
+        mineKeys.forEach(m => {
+          item[m] = parseFloat(r[m]) || 0;
+          total += item[m];
+        });
+        item['Total Output'] = Math.round(total * 10) / 10;
+        return item;
+      });
+    }
+
+    function triggerDataUpdate() {
+      if (appState.sourceMode === 'synthetic') {
+        generateSyntheticData();
+      }
+      updateAnalytics();
+    }
+
+    function populateMineFilterSelect() {
+      const select = document.getElementById('mineSelectFilter');
+      select.innerHTML = `<option value="ALL">All Mines + Aggregate</option>`;
+      appState.mines.forEach(m => {
+        select.innerHTML += `<option value="${m}">${m}</option>`;
+      });
+      select.innerHTML += `<option value="Total Output">Total Aggregate Output</option>`;
+    }
+
+    function getStats(arr) {
+      if (!arr || arr.length === 0) return { mean: 0, stdDev: 0, median: 0, iqr: 0, q1: 0, q3: 0 };
+      const n = arr.length;
+      const sum = arr.reduce((a, b) => a + b, 0);
+      const mean = sum / n;
+
+      const variance = arr.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / (n - 1 || 1);
+      const stdDev = Math.sqrt(variance);
+
+      const sorted = [...arr].sort((a, b) => a - b);
+      const median = getPercentile(sorted, 50);
+      const q1 = getPercentile(sorted, 25);
+      const q3 = getPercentile(sorted, 75);
+      const iqr = q3 - q1;
+
+      return { mean, stdDev, median, iqr, q1, q3 };
+    }
+
+    function getPercentile(sortedArr, p) {
+      const index = (p / 100) * (sortedArr.length - 1);
+      const lower = Math.floor(index);
+      const upper = Math.ceil(index);
+      const weight = index - lower;
+      if (upper >= sortedArr.length) return sortedArr[sortedArr.length - 1];
+      return sortedArr[lower] * (1 - weight) + sortedArr[upper] * weight;
+    }
+
+    function detectAnomalies(mineKey) {
+      const dataset = appState.dataset;
+      const values = dataset.map(d => d[mineKey]);
+      const stats = getStats(values);
+
+      const k = parseFloat(document.getElementById('iqrK').value);
+      const zCutoff = parseFloat(document.getElementById('zScoreThreshold').value);
+      const maN = parseInt(document.getElementById('maWindow').value);
+      const maThreshPct = parseFloat(document.getElementById('maThreshold').value) / 100;
+
+      const anomalies = [];
+      const n = values.length;
+      const tCrit = 1.96;
+      const grubbsCrit = ((n - 1) / Math.sqrt(n)) * Math.sqrt(Math.pow(tCrit, 2) / (n - 2 + Math.pow(tCrit, 2)));
+
+      values.forEach((val, idx) => {
+        const testsTriggered = [];
+
+        if (val < stats.q1 - k * stats.iqr || val > stats.q3 + k * stats.iqr) {
+          testsTriggered.push('IQR Rule');
+        }
+
+        const zScore = stats.stdDev > 0 ? Math.abs((val - stats.mean) / stats.stdDev) : 0;
+        if (zScore > zCutoff) {
+          testsTriggered.push(`Z-Score (${zScore.toFixed(1)}σ)`);
+        }
+
+        const start = Math.max(0, idx - maN);
+        const windowVals = values.slice(start, idx + 1);
+        const ma = windowVals.reduce((a, b) => a + b, 0) / windowVals.length;
+        const maDist = ma > 0 ? Math.abs(val - ma) / ma : 0;
+        if (maDist > maThreshPct) {
+          testsTriggered.push(`MA Dist (${(maDist * 100).toFixed(0)}%)`);
+        }
+
+        const gStat = stats.stdDev > 0 ? Math.abs(val - stats.mean) / stats.stdDev : 0;
+        if (gStat > grubbsCrit) {
+          testsTriggered.push("Grubbs' Test");
+        }
+
+        if (testsTriggered.length > 0) {
+          anomalies.push({
+            index: idx,
+            date: dataset[idx].date,
+            mine: mineKey,
+            value: val,
+            type: val < stats.mean ? 'Drop' : 'Spike',
+            tests: testsTriggered
+          });
+        }
+      });
+
+      return anomalies;
+    }
+
+    function fitPolynomialTrendline(xVals, yVals, degree) {
+      if (degree <= 0) return null;
+      const n = degree + 1;
+      const XTX = Array.from({ length: n }, () => new Array(n).fill(0));
+      const XTY = new Array(n).fill(0);
+
+      for (let i = 0; i < xVals.length; i++) {
+        const x = xVals[i];
+        const y = yVals[i];
+        for (let row = 0; row < n; row++) {
+          for (let col = 0; col < n; col++) {
+            XTX[row][col] += Math.pow(x, row + col);
+          }
+          XTY[row] += y * Math.pow(x, row);
+        }
+      }
+
+      const coeffs = solveLinearSystem(XTX, XTY);
+      return xVals.map(x => {
+        let yHat = 0;
+        for (let deg = 0; deg < coeffs.length; deg++) {
+          yHat += coeffs[deg] * Math.pow(x, deg);
+        }
+        return yHat;
+      });
+    }
+
+    function solveLinearSystem(A, B) {
+      const n = B.length;
+      for (let i = 0; i < n; i++) {
+        let maxRow = i;
+        for (let k = i + 1; k < n; k++) {
+          if (Math.abs(A[k][i]) > Math.abs(A[maxRow][i])) maxRow = k;
+        }
+        [A[i], A[maxRow]] = [A[maxRow], A[i]];
+        [B[i], B[maxRow]] = [B[maxRow], B[i]];
+
+        for (let k = i + 1; k < n; k++) {
+          const c = -A[k][i] / A[i][i];
+          for (let j = i; j < n; j++) {
+            if (i === j) A[k][j] = 0;
+            else A[k][j] += c * A[i][j];
+          }
+          B[k] += c * B[i];
+        }
+      }
+      const x = new Array(n).fill(0);
+      for (let i = n - 1; i >= 0; i--) {
+        let sum = 0;
+        for (let j = i + 1; j < n; j++) sum += A[i][j] * x[j];
+        x[i] = (B[i] - sum) / A[i][i];
+      }
+      return x;
+    }
+
+    function updateAnalytics() {
+      const filter = document.getElementById('mineSelectFilter').value;
+      const targets = filter === 'ALL' ? [...appState.mines, 'Total Output'] : [filter];
+
+      const statsSummary = {};
+      let allAnomalies = [];
+
+      targets.forEach(m => {
+        const vals = appState.dataset.map(d => d[m]);
+        statsSummary[m] = getStats(vals);
+        const anom = detectAnomalies(m);
+        statsSummary[m].outliersCount = anom.length;
+        allAnomalies = allAnomalies.concat(anom);
+      });
+
+      renderKPIs(statsSummary, targets[0]);
+      renderStatsTable(statsSummary);
+      renderAnomaliesTable(allAnomalies);
+      renderChart(targets);
+    }
+
+    function renderKPIs(statsSummary, primaryTarget) {
+      const kpiContainer = document.getElementById('kpiGrid');
+      const primary = statsSummary[primaryTarget] || statsSummary[Object.keys(statsSummary)[0]];
+
+      kpiContainer.innerHTML = `
+        <div class="bg-wy-card border border-wy-border rounded-xl p-3.5 flex flex-col justify-between">
+          <span class="text-[11px] font-mono text-slate-400 uppercase">Daily Mean Output</span>
+          <span class="text-xl font-mono font-bold text-wy-gold mt-1">${primary.mean.toFixed(1)} <span class="text-xs text-slate-500">t/d</span></span>
+        </div>
+        <div class="bg-wy-card border border-wy-border rounded-xl p-3.5 flex flex-col justify-between">
+          <span class="text-[11px] font-mono text-slate-400 uppercase">Std Deviation ($\sigma$)</span>
+          <span class="text-xl font-mono font-bold text-slate-200 mt-1">${primary.stdDev.toFixed(1)}</span>
+        </div>
+        <div class="bg-wy-card border border-wy-border rounded-xl p-3.5 flex flex-col justify-between">
+          <span class="text-[11px] font-mono text-slate-400 uppercase">Median (Q2)</span>
+          <span class="text-xl font-mono font-bold text-wy-accent mt-1">${primary.median.toFixed(1)}</span>
+        </div>
+        <div class="bg-wy-card border border-wy-border rounded-xl p-3.5 flex flex-col justify-between">
+          <span class="text-[11px] font-mono text-slate-400 uppercase">IQR Spread</span>
+          <span class="text-xl font-mono font-bold text-slate-200 mt-1">${primary.iqr.toFixed(1)}</span>
+        </div>
+      `;
+    }
+
+    function renderStatsTable(statsSummary) {
+      const tbody = document.getElementById('statsTableBody');
+      const pdfBody = document.getElementById('pdfStatsTable');
+      tbody.innerHTML = '';
+      if (pdfBody) pdfBody.innerHTML = '';
+
+      Object.keys(statsSummary).forEach(mine => {
+        const s = statsSummary[mine];
+        const row = `
+          <tr class="hover:bg-wy-border/30">
+            <td class="py-2 px-3 font-semibold text-slate-200">${mine}</td>
+            <td class="py-2 px-3 text-wy-gold">${s.mean.toFixed(1)}</td>
+            <td class="py-2 px-3">${s.stdDev.toFixed(1)}</td>
+            <td class="py-2 px-3">${s.median.toFixed(1)}</td>
+            <td class="py-2 px-3">${s.iqr.toFixed(1)}</td>
+            <td class="py-2 px-3"><span class="px-2 py-0.5 rounded text-[10px] ${s.outliersCount > 0 ? 'bg-wy-alert/20 text-wy-alert border border-wy-alert/40' : 'bg-slate-800 text-slate-400'}">${s.outliersCount} Outliers</span></td>
+          </tr>
+        `;
+        tbody.innerHTML += row;
+
+        if (pdfBody) {
+          pdfBody.innerHTML += `
+            <tr>
+              <td class="p-1.5 border font-semibold">${mine}</td>
+              <td class="p-1.5 border">${s.mean.toFixed(1)}</td>
+              <td class="p-1.5 border">${s.stdDev.toFixed(1)}</td>
+              <td class="p-1.5 border">${s.median.toFixed(1)}</td>
+              <td class="p-1.5 border">${s.iqr.toFixed(1)}</td>
+              <td class="p-1.5 border">${s.outliersCount}</td>
+            </tr>
+          `;
+        }
+      });
+    }
+
+    function renderAnomaliesTable(anomalies) {
+      const tbody = document.getElementById('anomaliesTableBody');
+      const pdfBody = document.getElementById('pdfAnomaliesTable');
+      const badge = document.getElementById('anomalyBadgeCount');
+
+      tbody.innerHTML = '';
+      if (pdfBody) pdfBody.innerHTML = '';
+      badge.innerText = `${anomalies.length} Incidents Logged`;
+
+      if (anomalies.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-slate-500">No anomalies detected under current thresholds.</td></tr>`;
+        return;
+      }
+
+      anomalies.slice(0, 50).forEach(a => {
+        const isSpike = a.type === 'Spike';
+        const typeBadge = isSpike
+          ? `<span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded text-[10px]">SPIKE</span>`
+          : `<span class="bg-rose-500/10 text-rose-400 border border-rose-500/30 px-1.5 py-0.5 rounded text-[10px]">DROP</span>`;
+
+        tbody.innerHTML += `
+          <tr class="hover:bg-wy-border/30">
+            <td class="py-2 px-3 text-slate-400">${a.date}</td>
+            <td class="py-2 px-3 font-semibold text-slate-200">${a.mine}</td>
+            <td class="py-2 px-3 font-mono ${isSpike ? 'text-emerald-400' : 'text-rose-400'}">${a.value}</td>
+            <td class="py-2 px-3">${typeBadge}</td>
+            <td class="py-2 px-3 text-[11px] text-slate-400">${a.tests.join(', ')}</td>
+          </tr>
+        `;
+
+        if (pdfBody) {
+          pdfBody.innerHTML += `
+            <tr>
+              <td class="p-1.5 border">${a.date}</td>
+              <td class="p-1.5 border font-semibold">${a.mine}</td>
+              <td class="p-1.5 border">${a.value}</td>
+              <td class="p-1.5 border">${a.type}</td>
+              <td class="p-1.5 border">${a.tests.join(', ')}</td>
+            </tr>
+          `;
+        }
+      });
+    }
+
+    function setChartType(type) {
+      appState.chartType = type;
+      document.getElementById('btnChartLine').className = type === 'line' ? 'py-1 rounded bg-wy-gold text-black font-semibold' : 'py-1 rounded text-slate-400 hover:text-white';
+      document.getElementById('btnChartBar').className = type === 'bar' ? 'py-1 rounded bg-wy-gold text-black font-semibold' : 'py-1 rounded text-slate-400 hover:text-white';
+      document.getElementById('btnChartStacked').className = type === 'stacked' ? 'py-1 rounded bg-wy-gold text-black font-semibold' : 'py-1 rounded text-slate-400 hover:text-white';
+
+      document.getElementById('chartBadge').innerText = `Active View: ${type.toUpperCase()}`;
+      updateAnalytics();
+    }
+
+    function renderChart(targets) {
+      const ctx = document.getElementById('mainChart').getContext('2d');
+      const polyDegree = parseInt(document.getElementById('polyDegree').value);
+      const dates = appState.dataset.map(d => d.date);
+
+      if (appState.chartInstance) {
+        appState.chartInstance.destroy();
+      }
+
+      const colors = ['#D4AF37', '#00F0FF', '#FF3366', '#00FF88', '#A855F7'];
+      const datasets = [];
+
+      targets.forEach((m, idx) => {
+        const dataVals = appState.dataset.map(d => d[m]);
+        const color = colors[idx % colors.length];
+
+        const anomalies = detectAnomalies(m);
+        const anomalyIndices = new Set(anomalies.map(a => a.index));
+
+        const pointRadius = dataVals.map((_, i) => anomalyIndices.has(i) ? 5 : 0);
+        const pointBg = dataVals.map((_, i) => anomalyIndices.has(i) ? '#FF3366' : color);
+
+        datasets.push({
+          label: m,
+          data: dataVals,
+          type: appState.chartType === 'stacked' || appState.chartType === 'bar' ? 'bar' : 'line',
+          backgroundColor: appState.chartType === 'line' ? `${color}20` : color,
+          borderColor: color,
+          borderWidth: 1.5,
+          pointRadius: pointRadius,
+          pointBackgroundColor: pointBg,
+          tension: 0.25,
+          stack: appState.chartType === 'stacked' ? 'combined' : undefined
+        });
+
+        if (polyDegree > 0) {
+          const xIndices = Array.from({ length: dataVals.length }, (_, i) => i);
+          const trendVals = fitPolynomialTrendline(xIndices, dataVals, polyDegree);
+
+          if (trendVals) {
+            datasets.push({
+              label: `${m} (Degree ${polyDegree} Trend)`,
+              data: trendVals,
+              type: 'line',
+              borderColor: `${color}AA`,
+              borderWidth: 2,
+              borderDash: [4, 4],
+              pointRadius: 0,
+              fill: false
+            });
+          }
+        }
+      });
+
+      appState.chartInstance = new Chart(ctx, {
+        data: { labels: dates, datasets: datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          scales: {
+            x: {
+              stacked: appState.chartType === 'stacked',
+              grid: { color: 'rgba(31, 41, 61, 0.4)' },
+              ticks: { color: '#94A3B8', font: { family: 'JetBrains Mono', size: 10 }, maxTicksLimit: 12 }
+            },
+            y: {
+              stacked: appState.chartType === 'stacked',
+              grid: { color: 'rgba(31, 41, 61, 0.4)' },
+              ticks: { color: '#94A3B8', font: { family: 'JetBrains Mono', size: 10 } }
+            }
+          },
+          plugins: {
+            legend: { labels: { color: '#E2E8F0', font: { family: 'JetBrains Mono', size: 11 } } },
+            tooltip: {
+              backgroundColor: '#121824',
+              titleColor: '#D4AF37',
+              borderColor: '#1F293D',
+              borderWidth: 1,
+              titleFont: { family: 'JetBrains Mono' },
+              bodyFont: { family: 'JetBrains Mono' }
+            }
+          }
+        }
+      });
+    }
+
+    async function generatePDFReport() {
+      const { jsPDF } = window.jspdf;
+      const pdfContainer = document.getElementById('pdfReportContainer');
+
+      document.getElementById('pdfReportDate').innerText = `Date: ${new Date().toISOString().split('T')[0]}`;
+      const summaryDiv = document.getElementById('pdfSummaryStats');
+      const primaryStats = getStats(appState.dataset.map(d => d['Total Output']));
+
+      summaryDiv.innerHTML = `
+        <div><strong>Total Samples:</strong> ${appState.dataset.length} days</div>
+        <div><strong>Mean Aggregate Output:</strong> ${primaryStats.mean.toFixed(1)} t/d</div>
+        <div><strong>Active Mines:</strong> ${appState.mines.join(', ')}</div>
+      `;
+
+      pdfContainer.classList.remove('hidden');
+
+      try {
+        const canvas = await html2canvas(pdfContainer, { scale: 2 });
+        const imgData = canvas.toDataURL('image/png');
+
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save(`WeylandYutani_Extraction_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+      } catch (err) {
+        alert('Failed to generate PDF report: ' + err.message);
+      } finally {
+        pdfContainer.classList.add('hidden');
+      }
+    }
+  </script>
+</body>
+</html>
