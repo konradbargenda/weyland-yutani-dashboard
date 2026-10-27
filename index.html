@@ -291,7 +291,11 @@
       dynamicMinesList = headers.slice(1).filter(h => h && h.toLowerCase() !== 'value' && h.toLowerCase() !== 'description');
 
       for (let i = 1; i < lines.length; i++) {
-        const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+        let line = lines[i];
+        // Poprawka dla polskich przecinków dziesiętnych wewnątrz cudzysłowów lub liczb (zamiana np. 90,50 na 90.50)
+        line = line.replace(/(\d+),(\d+)/g, '$1.$2');
+
+        const cols = line.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
         if (cols.length < 2) continue;
 
         let row = { date: cols[0] || `Day-${i}` };
