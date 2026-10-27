@@ -319,10 +319,15 @@
 
       if (rows.length < 2) return;
 
-      // Czyszczenie nagłówków z cudzysłowów i ukrytych białych znaków
       const headers = rows[0].map(h => h.replace(/^["']|["']$/g, '').trim());
       globalData = [];
-      dynamicMinesList = headers.slice(1).filter(h => h && h.toLowerCase() !== 'value' && h.toLowerCase() !== 'description');
+      // Precyzyjne wyłapanie unikalnych nagłówków kopalń (pomijamy puste, datę, value, description)
+      dynamicMinesList = [];
+      headers.slice(1).forEach(h => {
+        if (h && h.toLowerCase() !== 'value' && h.toLowerCase() !== 'description' && !dynamicMinesList.includes(h)) {
+          dynamicMinesList.push(h);
+        }
+      });
 
       for (let i = 1; i < rows.length; i++) {
         let cols = rows[i].map(c => c.replace(/^["']|["']$/g, '').trim());
@@ -335,8 +340,8 @@
           let colIdx = headers.indexOf(m);
           let rawVal = colIdx !== -1 ? cols[colIdx] : '';
           
-          // Bezpieczna zamiana przecinka na kropkę w liczbie zmiennoprzecinkowej
           if (rawVal) {
+            // Usunięcie ewentualnych spacji i zamiana przecinka na kropkę
             rawVal = rawVal.replace(/\s+/g, '').replace(',', '.');
           }
           let val = parseFloat(rawVal);
