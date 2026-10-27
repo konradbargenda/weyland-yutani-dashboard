@@ -273,11 +273,12 @@
 
       try {
         const response = await fetch(url);
+        if (!response.ok) throw new Error("Network response failed");
         const text = await response.text();
         parseCSV(text);
         renderDashboard();
       } catch (err) {
-        console.error("Error fetching CSV stream.", err);
+        console.error("Error fetching CSV stream from Google Sheets:", err);
       }
     }
 
@@ -287,14 +288,7 @@
 
       const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
       globalData = [];
-
-      // Inteligentne wykrywanie nagłówków z kopalniami (pomijamy 'Value', 'Description' itp.)
       dynamicMinesList = headers.slice(1).filter(h => h && h.toLowerCase() !== 'value' && h.toLowerCase() !== 'description');
-
-      // Jeśli link zwraca pustą listę kopalń, używamy domyślnych bezpiecznych nazw
-      if (dynamicMinesList.length === 0) {
-        dynamicMinesList = ['Acheron-42', 'Hadley’s Hope', 'Fiorina-16', 'LV-223'];
-      }
 
       for (let i = 1; i < lines.length; i++) {
         const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
@@ -468,4 +462,100 @@
             <td class="py-2 text-slate-400">${a.date}</td>
             <td class="py-2 text-wy-amber font-bold">${a.target}</td>
             <td class="py-2 text-wy-bright">${a.val} t</td>
-            <td class="py-
+            <td class="py-2">
+              <span class="px-1.5 py-0.5 text-[9px] rounded font-bold ${a.type==='SPIKE'?'bg-wy-red/20 text-wy-red':'bg-wy-cyan/20 text-wy-cyan'}">
+                ${a.type}
+              </span>
+            </td>
+            <td class="py-2 text-slate-400">${a.tests}</td>
+          </tr>
+        `;
+      });
+
+      if (!anomalies.length) {
+        logBody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-slate-500">No telemetry anomalies detected with current parameters.</td></tr>`;
+      }
+
+      const targetValues = globalData.map(d => d[selectedTarget] !== undefined ? d[selectedTarget] : 0);
+      const labels = globalData.map(d => d.date);
+      const anomalyDates = new Set(anomalies.map(a => a.date));
+      const pointRadii = globalData.map(d => anomalyDates.has(d.date) ? 6 : 0);
+      const pointColors = globalData.map(d => anomalyDates.has(d.date) ? '#ef4444' : 'transparent');
+
+      let datasets = [];
+      let isStacked = chartType === 'stacked';
+      let actualType = isStacked ? 'bar' : chartType;
+
+      if (selectedTarget === 'Total Output' && isStacked) {
+        const colors = ['#f59e0b', '#06b6d4', '#ef4444', '#10b981', '#a855f7'];
+        dynamicMinesList.forEach((m, idx) => {
+          datasets.push({
+            label: m,
+            data: globalData.map(d => d[m]),
+            backgroundColor: colors[idx % colors.length],
+            stack: 'stack0'
+          });
+        });
+      } else {
+        datasets.push({
+          label: selectedTarget,
+          data: targetValues,
+          borderColor: '#f59e0b',
+          backgroundColor: actualType === 'bar' ? '#f59e0b' : 'rgba(245, 158, 11, 0.1)',
+          borderWidth: 2,
+          pointRadius: pointRadii,
+          pointBackgroundColor: pointColors,
+          fill: actualType === 'line'
+        });
+      }
+
+      if (trendDegree > 0 && !isStacked) {
+        datasets.push({
+          label: `${selectedTarget} (Deg ${trendDegree} Trend)`,
+          data: computePolynomialTrendline(targetValues, trendDegree),
+          borderColor: '#06b6d4',
+          borderWidth: 2,
+          borderDash: [5, 5],
+          pointRadius: 0,
+          fill: false
+        });
+      }
+
+      const ctx = document.getElementById('telemetryChart').getContext('2d');
+      if (telemetryChart) telemetryChart.destroy();
+
+      telemetryChart = new Chart(ctx, {
+        type: actualType,
+        data: { labels: labels, datasets: datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { stacked: isStacked, grid: { color: '#1b2433' }, ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 10 } } },
+            y: { stacked: isStacked, grid: { color: '#1b2433' }, ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 10 } } }
+          },
+          plugins: {
+            legend: { labels: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 11 } } }
+          }
+        }
+      });
+    }
+
+    function exportPDF() {
+      const element = document.getElementById('dashboard-content');
+      html2pdf().set({
+        margin: 5,
+        filename: 'Weyland-Yutani-Telemetry-Report.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, backgroundColor: '#070a0f' },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+      }).from(element).save();
+    }
+
+    window.onload = () => {
+      fetchCSVData();
+    };
+  </script>
+
+</body>
+</html>
