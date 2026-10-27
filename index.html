@@ -283,33 +283,68 @@
     }
 
     function parseCSV(csvText) {
-      const lines = csvText.split('\n').filter(l => l.trim() !== '');
-      if (lines.length < 2) return;
+      // Prawidłowy parser CSV obsługujący cudzysłowy i przecinki wewnątrz pól
+      const rows = [];
+      let currentRow = [];
+      let currentField = '';
+      let inQuotes = false;
 
-      const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+      for (let i = 0; i < csvText.length; i++) {
+        let char = csvText[i];
+        let nextChar = csvText[i + 1];
+
+        if (char === '"' && inQuotes && nextChar === '"') {
+          currentField += '"';
+          i++;
+        } else if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          currentRow.push(currentField.trim());
+          currentField = '';
+        } else if ((char === '\r' || char === '\n') && !inQuotes) {
+          if (char === '\r' && nextChar === '\n') { i++; }
+          currentRow.push(currentField.trim());
+          if (currentRow.length > 1 || currentRow[0] !== '') {
+            rows.push(currentRow);
+          }
+          currentRow = [];
+          currentField = '';
+        } else {
+          currentField += char;
+        }
+      }
+      if (currentField !== '' || currentRow.length > 0) {
+        currentRow.push(currentField.trim());
+        rows.push(currentRow);
+      }
+
+      if (rows.length < 2) return;
+
+      const headers = rows[0].map(h => h.replace(/^"|"$/g, ''));
       globalData = [];
       dynamicMinesList = headers.slice(1).filter(h => h && h.toLowerCase() !== 'value' && h.toLowerCase() !== 'description');
 
-      for (let i = 1; i < lines.length; i++) {
-        let line = lines[i];
-        // Poprawka dla polskich przecinków dziesiętnych wewnątrz cudzysłowów lub liczb (zamiana np. 90,50 na 90.50)
-        line = line.replace(/(\d+),(\d+)/g, '$1.$2');
-
-        const cols = line.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+      for (let i = 1; i < rows.length; i++) {
+        let cols = rows[i];
         if (cols.length < 2) continue;
 
-        let row = { date: cols[0] || `Day-${i}` };
+        let row = { date: cols[0].replace(/^"|"$/g, '') || `Day-${i}` };
         let total = 0;
-        
+
         dynamicMinesList.forEach((m, idx) => {
           let colIdx = headers.indexOf(m);
-          let val = colIdx !== -1 ? parseFloat(cols[colIdx]) : parseFloat(cols[idx + 1]);
+          let rawVal = colIdx !== -1 ? cols[colIdx] : cols[idx + 1];
+          
+          if (rawVal) {
+            rawVal = rawVal.replace(/^"|"$/g, '').replace(',', '.');
+          }
+          let val = parseFloat(rawVal);
           val = isNaN(val) ? 0 : val;
           row[m] = val;
           total += val;
         });
 
-        row['Total Output'] = Math.round(total * 10) / 10;
+        row['Total Output'] = Math.round(total * 100) / 100;
         globalData.push(row);
       }
 
