@@ -155,17 +155,6 @@
                 <option value="stacked">Stacked Bar (All Mines Component)</option>
               </select>
             </div>
-
-            <div>
-              <label class="block text-slate-400 mb-1">Polynomial Trendline Overlay</label>
-              <select id="select-trend-degree" onchange="renderDashboard()" class="w-full bg-wy-bg border border-wy-border rounded px-3 py-2 text-wy-bright focus:outline-none focus:border-wy-amber">
-                <option value="0">Disabled</option>
-                <option value="1">Degree 1 (Linear)</option>
-                <option value="2">Degree 2 (Quadratic)</option>
-                <option value="3">Degree 3 (Cubic)</option>
-                <option value="4">Degree 4 (Quartic)</option>
-              </select>
-            </div>
           </div>
         </div>
 
@@ -190,23 +179,6 @@
               </div>
               <input type="range" id="param-zscore" min="1.5" max="4.0" step="0.25" value="2.5" oninput="updateParams()" class="w-full">
             </div>
-
-            <div>
-              <div class="flex justify-between text-slate-300 mb-1">
-                <span>Moving Avg Distance Threshold (%):</span>
-                <span id="val-ma" class="font-bold text-purple-400">20%</span>
-              </div>
-              <input type="range" id="param-ma" min="5" max="50" step="5" value="20" oninput="updateParams()" class="w-full">
-            </div>
-
-            <div>
-              <label class="block text-slate-300 mb-1">Grubbs' Test Significance (α)</label>
-              <select id="param-grubbs" onchange="renderDashboard()" class="w-full bg-wy-bg border border-wy-border rounded px-3 py-2 text-wy-bright focus:outline-none focus:border-wy-amber">
-                <option value="0.01">α = 0.01 (Strict 99%)</option>
-                <option value="0.05" selected>α = 0.05 (Standard 95%)</option>
-                <option value="0.10">α = 0.10 (Lenient 90%)</option>
-              </select>
-            </div>
           </div>
         </div>
       </div>
@@ -215,7 +187,7 @@
         <div class="bg-wy-card border border-wy-border p-4 rounded-lg space-y-4">
           <div class="flex justify-between items-center border-b border-wy-border pb-2">
             <h2 class="font-orbitron font-bold text-sm text-wy-amber tracking-wide uppercase">
-              Extraction Timeseries Telemetry
+              Extraction Timeseries Telemetry (Raw CSV Stream)
             </h2>
             <span id="chart-status-badge" class="text-[10px] px-2 py-0.5 rounded bg-wy-amber/20 border border-wy-amber/40 text-wy-amber">
               ACTIVE_STREAM
@@ -283,7 +255,7 @@
     }
 
     function parseCSV(csvText) {
-      // Automatyczne rozpoznanie separatora (przecinek vs średnik)
+      // Automatyczne wykrywanie separatora (przecinek vs średnik)
       const firstLine = csvText.split('\n')[0] || '';
       const commaCount = (firstLine.match(/,/g) || []).length;
       const semicolonCount = (firstLine.match(/;/g) || []).length;
@@ -347,7 +319,6 @@
           let rawVal = colIdx !== -1 ? cols[colIdx] : '';
           
           if (rawVal) {
-            // Czyszczenie i zamiana przecinka na kropkę dla pełnej precyzji zmiennoprzecinkowej
             rawVal = rawVal.replace(/\s+/g, '').replace(',', '.');
           }
           let val = parseFloat(rawVal);
@@ -394,37 +365,12 @@
       };
     }
 
-    function computePolynomialTrendline(values, degree) {
-      const n = values.length;
-      if (degree === 1) {
-        let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
-        for (let i = 0; i < n; i++) {
-          sumX += i;
-          sumY += values[i];
-          sumXY += i * values[i];
-          sumXX += i * i;
-        }
-        let slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
-        let intercept = (sumY - slope * sumX) / n;
-        return values.map((_, i) => Math.round((intercept + slope * i) * 100) / 100);
-      }
-
-      const stats = calculateStats(values);
-      return values.map((v, i) => {
-        let normI = (i - n / 2) / (n / 2);
-        let curve = Math.pow(normI, degree) * (stats.rawStd * 0.5);
-        return Math.round((stats.rawMean + curve) * 100) / 100;
-      });
-    }
-
     function detectAnomalies(data, targetKey) {
       const values = data.map(d => d[targetKey] || 0);
       const stats = calculateStats(values);
       
       const kIqr = parseFloat(document.getElementById('param-iqr').value);
       const zThresh = parseFloat(document.getElementById('param-zscore').value);
-      const maPct = parseFloat(document.getElementById('param-ma').value) / 100;
-      const gCritical = 3.2;
 
       let anomalies = [];
 
@@ -438,18 +384,6 @@
 
         if (stats.rawStd > 0 && Math.abs((val - stats.rawMean) / stats.rawStd) > zThresh) {
           tests.push('Z-Score');
-        }
-
-        if (i >= 7) {
-          let slice = values.slice(i - 7, i);
-          let ma = slice.reduce((a, b) => a + b, 0) / 7;
-          if (ma > 0 && Math.abs(val - ma) / ma > maPct) {
-            tests.push('MA Distance');
-          }
-        }
-
-        if (stats.rawStd > 0 && Math.abs(val - stats.rawMean) / stats.rawStd > gCritical) {
-          tests.push("Grubbs' Test");
         }
 
         if (tests.length > 0) {
@@ -469,7 +403,6 @@
     function updateParams() {
       document.getElementById('val-iqr').textContent = document.getElementById('param-iqr').value;
       document.getElementById('val-zscore').textContent = document.getElementById('param-zscore').value;
-      document.getElementById('val-ma').textContent = document.getElementById('param-ma').value + '%';
       renderDashboard();
     }
 
@@ -478,7 +411,6 @@
 
       const selectedTarget = document.getElementById('select-mine').value;
       const chartType = document.getElementById('select-chart-type').value;
-      const trendDegree = parseInt(document.getElementById('select-trend-degree').value);
 
       const allTargets = ['Total Output', ...dynamicMinesList];
       const matrixBody = document.getElementById('matrix-table-body');
@@ -557,18 +489,6 @@
           pointRadius: pointRadii,
           pointBackgroundColor: pointColors,
           fill: actualType === 'line'
-        });
-      }
-
-      if (trendDegree > 0 && !isStacked) {
-        datasets.push({
-          label: `${selectedTarget} (Deg ${trendDegree} Trend)`,
-          data: computePolynomialTrendline(targetValues, trendDegree),
-          borderColor: '#06b6d4',
-          borderWidth: 2,
-          borderDash: [5, 5],
-          pointRadius: 0,
-          fill: false
         });
       }
 
