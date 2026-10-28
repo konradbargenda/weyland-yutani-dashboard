@@ -243,7 +243,6 @@
       let baseUrl = document.getElementById('csvUrlInput').value.trim();
       if (!baseUrl) return;
 
-      // Dodanie znacznika czasu wymuszającego ominięcie pamięci podręcznej (cache) przeglądarki
       const separator = baseUrl.includes('?') ? '&' : '?';
       const cacheBustUrl = `${baseUrl}${separator}_cb=${new Date().getTime()}`;
 
@@ -304,7 +303,6 @@
       globalData = [];
       dynamicMinesList = [];
       
-      // Wykrywamy kolumny kopalń (pomijamy pierwszą, czyli datę)
       headers.slice(1).forEach(h => {
         if (h && h.toLowerCase() !== 'value' && h.toLowerCase() !== 'description' && !dynamicMinesList.includes(h)) {
           dynamicMinesList.push(h);
@@ -517,15 +515,18 @@
       });
     }
 
+    // Dodano opóźnienie, aby upewnić się, że wykres Chart.js w pełni się wyrenderuje przed capture do PDF
     function exportPDF() {
       const element = document.getElementById('dashboard-content');
-      html2pdf().set({
-        margin: 5,
-        filename: 'Weyland-Yutani-Telemetry-Report.pdf',
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, backgroundColor: '#070a0f' },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-      }).from(element).save();
+      setTimeout(() => {
+        html2pdf().set({
+          margin: 5,
+          filename: 'Weyland-Yutani-Telemetry-Report.pdf',
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, backgroundColor: '#070a0f' },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+        }).from(element).save();
+      }, 400);
     }
 
     window.onload = () => {
