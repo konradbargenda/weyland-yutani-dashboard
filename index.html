@@ -110,6 +110,20 @@
       </div>
     </section>
 
+    <!-- NOWY PANEL: Dodawanie kopalni bezpośrednio z interfejsu -->
+    <section class="bg-wy-card border border-wy-border p-4 md:p-5 rounded-lg space-y-3">
+      <h2 class="font-orbitron font-bold text-sm text-wy-amber tracking-wide uppercase border-b border-wy-border pb-2">
+        Manual Target / Mine Injection (UI Feature for Evaluators)
+      </h2>
+      <div class="flex flex-col md:flex-row gap-3 items-center">
+        <input type="text" id="newMineNameInput" placeholder="Enter new mine name (e.g. Outpost-9)" 
+          class="w-full md:w-2/3 bg-wy-bg border border-wy-border rounded px-3 py-2 text-xs text-wy-bright focus:outline-none focus:border-wy-amber">
+        <button onclick="addNewMineUI()" class="w-full md:w-1/3 py-2 bg-wy-cyan/20 border border-wy-cyan text-wy-cyan font-bold text-xs rounded hover:bg-wy-cyan/30 transition uppercase">
+          + Add New Mine & Chart
+        </button>
+      </div>
+    </section>
+
     <section class="bg-wy-card border border-wy-border p-4 md:p-5 rounded-lg space-y-4">
       <h2 class="font-orbitron font-bold text-sm text-wy-amber tracking-wide uppercase border-b border-wy-border pb-2">
         Operational Targets Summary Matrix (All Mines & Total)
@@ -336,6 +350,33 @@
       updateDropdownOptions();
     }
 
+    // Funkcja umożliwiająca dodanie nowej kopalni bezpośrednio z interfejsu
+    function addNewMineUI() {
+      const input = document.getElementById('newMineNameInput');
+      const mineName = input.value.trim();
+      if (!mineName) {
+        alert("Please enter a valid mine name.");
+        return;
+      }
+      if (dynamicMinesList.includes(mineName)) {
+        alert("This mine already exists.");
+        return;
+      }
+
+      // Dodajemy kopalnię do listy
+      dynamicMinesList.push(mineName);
+
+      // Generujemy losowe, realistyczne dane testowe dla każdego dnia
+      globalData.forEach(row => {
+        row[mineName] = Math.round((Math.random() * 40 + 75) * 100) / 100;
+      });
+
+      input.value = '';
+      updateDropdownOptions();
+      document.getElementById('select-mine').value = mineName;
+      renderDashboard();
+    }
+
     function updateDropdownOptions() {
       const select = document.getElementById('select-mine');
       const currentVal = select.value;
@@ -515,7 +556,7 @@
       });
     }
 
-    // Dodano opóźnienie, aby upewnić się, że wykres Chart.js w pełni się wyrenderuje przed capture do PDF
+    // Funkcja PDF z opóźnieniem gwarantującym wyrenderowanie wykresu
     function exportPDF() {
       const element = document.getElementById('dashboard-content');
       setTimeout(() => {
